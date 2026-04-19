@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { 
   Plane, 
   Globe, 
@@ -12,12 +12,18 @@ import {
   ArrowLeftRight, 
   Loader2, 
   Info,
-  Layers
+  Layers,
+  Mic,
+  MicOff,
+  Volume2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
 import { getAlternativePerspective, type AlternativePerspectiveOutput } from "@/ai/flows/get-alternative-perspective";
+import { textToSpeech } from "@/ai/flows/tts-flow";
+import { handleVoiceQuery } from "@/ai/flows/voice-chat-flow";
+import { useVAD } from "@/hooks/use-vad";
 
 interface TravelIntelligenceProps {
   data?: JourneyIntelligenceOutput | null;
@@ -45,6 +51,68 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
   const [altPerspective, setAltPerspective] = useState<AlternativePerspectiveOutput | null>(null);
   const [isLoadingAlt, setIsLoadingAlt] = useState(false);
   const [showAlt, setShowAlt] = useState(false);
+  
+  // Voice Interactive State
+  const [isInteractiveMode, setIsInteractiveMode] = useState(false);
+  const [isAiTalking, setIsAiTalking] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const { startVAD, isSpeaking } = useVAD({
+    onSpeechStart: () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        setIsAiTalking(false);
+        setStatusMessage("Listening to you...");
+      }
+    },
+    onSpeechEnd: async (blob) => {
+      if (!data) return;
+      setStatusMessage("Thinking...");
+      
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Audio = reader.result as string;
+        try {
+          const result = await handleVoiceQuery({
+            userAudioUri: base64Audio,
+            newsContext: showAlt && altPerspective ? altPerspective.altSummary : data.summary
+          });
+          
+          if (audioRef.current) {
+            audioRef.current.src = result.audioResponse;
+            audioRef.current.play();
+            setIsAiTalking(true);
+            setStatusMessage("Guide responding...");
+          }
+        } catch (error) {
+          console.error("Voice chat failed:", error);
+          setStatusMessage("Sorry, I missed that.");
+        }
+      };
+      reader.readAsDataURL(blob);
+    }
+  });
+
+  const startBriefing = async () => {
+    if (!data) return;
+    setIsInteractiveMode(true);
+    setStatusMessage("Preparing briefing...");
+    startVAD();
+
+    try {
+      const textToRead = showAlt && altPerspective ? altPerspective.altSummary : data.summary;
+      const { media } = await textToSpeech(textToRead);
+      if (audioRef.current) {
+        audioRef.current.src = media;
+        audioRef.current.play();
+        setIsAiTalking(true);
+        setStatusMessage("Reading briefing...");
+      }
+    } catch (error) {
+      console.error("Briefing failed:", error);
+    }
+  };
 
   const handleTogglePerspective = async () => {
     if (!showAlt && !altPerspective && data && category) {
@@ -68,6 +136,8 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
   if (data) {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+        <audio ref={audioRef} onEnded={() => setIsAiTalking(false)} className="hidden" />
+        
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-headline font-bold text-primary flex items-center gap-2">
             <Map className="text-secondary" /> {data.country || "Global"} Insights
@@ -78,7 +148,25 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
         </div>
 
         <div className="p-5 rounded-2xl glass border-primary/10 space-y-4">
-          <div className="relative overflow-hidden">
+          <div className="flex justify-center mb-4">
+            {!isInteractiveMode ? (
+              <Button 
+                onClick={startBriefing}
+                className="rounded-full bg-primary text-white gap-2 px-6 shadow-xl hover:scale-105 transition-transform"
+              >
+                <Volume2 size={18} /> Start Voice Briefing
+              </Button>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <div className={`p-4 rounded-full ${isSpeaking ? 'bg-secondary animate-pulse' : isAiTalking ? 'bg-primary animate-bounce' : 'bg-muted'} transition-colors`}>
+                  {isSpeaking ? <Mic className="text-primary-foreground" size={24} /> : <Volume2 className="text-primary-foreground" size={24} />}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60">{statusMessage}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="relative overflow-hidden min-h-[80px]">
             <div className={`transition-all duration-500 ${showAlt ? "-translate-x-full opacity-0 absolute" : "translate-x-0 opacity-100"}`}>
               <p className="text-primary font-medium leading-relaxed">
                 {data.summary}
@@ -95,14 +183,6 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
                 <p className="text-primary font-medium leading-relaxed italic">
                   {altPerspective.altSummary}
                 </p>
-                <div className="mt-4 p-3 rounded-xl bg-secondary/10 border border-secondary/20">
-                  <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1 flex items-center gap-1">
-                    <ArrowLeftRight size={10} /> Perspective Shift
-                  </h4>
-                  <p className="text-xs text-primary/80 leading-relaxed">
-                    {altPerspective.differenceAnalysis}
-                  </p>
-                </div>
               </div>
             )}
           </div>
@@ -137,13 +217,6 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
               </div>
             )}
           </div>
-
-          {data.travelAlert && (
-            <div className="p-4 rounded-xl bg-red-50 border border-red-100 flex items-start gap-3">
-              <AlertTriangle size={18} className="text-red-600 mt-0.5" />
-              <p className="text-xs text-red-900 font-medium">{data.travelAlert}</p>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -186,15 +259,6 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
             </div>
           );
         })}
-      </div>
-
-      <div className="p-4 rounded-xl bg-primary text-primary-foreground space-y-2">
-        <div className="flex items-center gap-2 font-bold text-sm">
-          <Info size={16} /> Quick Note
-        </div>
-        <p className="text-xs opacity-90 leading-relaxed">
-          Select a navigation category to get real-time agentic insights for your next destination.
-        </p>
       </div>
     </div>
   );

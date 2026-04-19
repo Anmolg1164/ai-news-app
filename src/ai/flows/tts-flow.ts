@@ -17,6 +17,29 @@ export async function textToSpeech(text: string): Promise<{ media: string }> {
   return ttsFlow(text);
 }
 
+export async function toWav(
+  pcmData: Buffer,
+  channels = 1,
+  rate = 24000,
+  sampleWidth = 2
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
+    });
+
+    let bufs: any[] = [];
+    writer.on('error', reject);
+    writer.on('data', (d) => bufs.push(d));
+    writer.on('end', () => resolve(Buffer.concat(bufs).toString('base64')));
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
+
 const ttsFlow = ai.defineFlow(
   {
     name: 'ttsFlow',
@@ -51,26 +74,3 @@ const ttsFlow = ai.defineFlow(
     };
   }
 );
-
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    let bufs: any[] = [];
-    writer.on('error', reject);
-    writer.on('data', (d) => bufs.push(d));
-    writer.on('end', () => resolve(Buffer.concat(bufs).toString('base64')));
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
