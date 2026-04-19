@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -17,14 +18,13 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleCategoryClick = async (category: string) => {
-    setIsLoading(true);
     setActiveCategory(category);
+    setIsSheetOpen(true);
+    setIsLoading(true);
+    setIntelligenceData(null); // Reset for skeleton state
     try {
       const result = await getJourneyIntelligence({ category });
       setIntelligenceData(result);
-      if (result.country || result.summary) {
-        setIsSheetOpen(true);
-      }
     } catch (error) {
       console.error("Agentic intelligence failure:", error);
     } finally {
@@ -34,7 +34,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pb-32 bg-background/50">
-      {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-primary/5">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -78,8 +77,6 @@ export default function Home() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Left Column: Intelligence & Wisdom */}
           <aside className="lg:col-span-4 space-y-8 order-2 lg:order-1">
             <section className="animate-in fade-in slide-in-from-left-4 duration-500">
               <TravelIntelligence />
@@ -102,7 +99,6 @@ export default function Home() {
             </div>
           </aside>
 
-          {/* Right Column: Main Content (News Briefs) */}
           <section className="lg:col-span-8 space-y-8 order-1 lg:order-2">
             <div className="relative h-64 rounded-[2.5rem] overflow-hidden shadow-2xl glass mb-12">
               <Image 
@@ -126,13 +122,17 @@ export default function Home() {
       </main>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent side="right" className="w-[400px] sm:w-[540px] glass border-l-primary/10">
+        <SheetContent side="right" className="w-[400px] sm:w-[540px] glass border-l-primary/10 overflow-y-auto">
           <SheetHeader className="mb-6">
             <SheetTitle className="text-2xl font-headline font-bold text-primary flex items-center gap-2">
               <Sparkles className="text-secondary" /> Agentic Journey Insight
             </SheetTitle>
           </SheetHeader>
-          <TravelIntelligence data={intelligenceData} category={activeCategory} />
+          <TravelIntelligence 
+            data={intelligenceData} 
+            category={activeCategory} 
+            isLoading={isLoading} 
+          />
         </SheetContent>
       </Sheet>
 

@@ -20,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
 import { type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
 import { getAlternativePerspective, type AlternativePerspectiveOutput } from "@/ai/flows/get-alternative-perspective";
 import { textToSpeech } from "@/ai/flows/tts-flow";
@@ -29,6 +30,7 @@ import { useVAD } from "@/hooks/use-vad";
 interface TravelIntelligenceProps {
   data?: JourneyIntelligenceOutput | null;
   category?: string;
+  isLoading?: boolean;
 }
 
 const DEFAULT_INTELLIGENCE = [
@@ -48,12 +50,11 @@ const DEFAULT_INTELLIGENCE = [
   }
 ];
 
-export function TravelIntelligence({ data, category }: TravelIntelligenceProps) {
+export function TravelIntelligence({ data, category, isLoading }: TravelIntelligenceProps) {
   const [altPerspective, setAltPerspective] = useState<AlternativePerspectiveOutput | null>(null);
   const [isLoadingAlt, setIsLoadingAlt] = useState(false);
   const [showAlt, setShowAlt] = useState(false);
   
-  // Voice Interactive State
   const [isInteractiveMode, setIsInteractiveMode] = useState(false);
   const [isAiTalking, setIsAiTalking] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -61,7 +62,6 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
 
   const { startVAD, isSpeaking } = useVAD({
     onSpeechStart: () => {
-      // INTERRUPT: If the user starts speaking, stop the AI audio immediately
       if (audioRef.current && isAiTalking) {
         audioRef.current.pause();
         setIsAiTalking(false);
@@ -156,7 +156,7 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
           if (subPart.toLowerCase() === term.toLowerCase()) {
             newParts.push(
               <span key={`${term}-${i}`} className="inline-flex items-center gap-1 group">
-                <span className="font-bold border-b border-dotted border-primary/40 group-hover:border-primary transition-colors">
+                <span className="font-bold border-b border-dotted border-primary/40 group-hover:border-primary transition-colors cursor-help">
                   {subPart}
                 </span>
                 <Popover>
@@ -165,7 +165,7 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
                       <HelpCircle size={14} className="mb-1" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-64 glass p-4 text-xs">
+                  <PopoverContent className="w-64 glass p-4 text-xs z-[60]">
                     <div className="space-y-1">
                       <p className="font-bold text-primary uppercase tracking-tighter">ELIF: {term}</p>
                       <p className="text-primary/80 leading-relaxed italic">
@@ -187,6 +187,29 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
     return <>{parts}</>;
   };
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48 bg-primary/10" />
+          <Skeleton className="h-6 w-24 bg-primary/10" />
+        </div>
+        <div className="p-5 rounded-2xl glass space-y-4">
+          <Skeleton className="h-10 w-full rounded-full bg-primary/10" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full bg-primary/10" />
+            <Skeleton className="h-4 w-5/6 bg-primary/10" />
+            <Skeleton className="h-4 w-4/6 bg-primary/10" />
+          </div>
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <Skeleton className="h-12 w-full rounded-xl bg-primary/10" />
+            <Skeleton className="h-12 w-full rounded-xl bg-primary/10" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (data) {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -196,7 +219,7 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
           <h2 className="text-2xl font-headline font-bold text-primary flex items-center gap-2">
             <Map className="text-secondary" /> {data.country || "Global"} Insights
           </h2>
-          <Badge variant="outline" className="text-[10px] font-bold tracking-widest uppercase">
+          <Badge variant="outline" className="text-[10px] font-bold tracking-widest uppercase border-primary/20">
             {data.sourceRegion} Feed
           </Badge>
         </div>
