@@ -1,0 +1,16 @@
+{
+  "placeholderImages": [
+    {
+      "id": "travel-1",
+      "description": "Serene mountain landscape",
+      "imageUrl": "https://picsum.photos/seed/travel1/800/600",
+      "imageHint": "mountain serenity"
+    },
+    {
+      "id": "travel-2",
+      "description": "Coastal travel path",
+      "imageUrl": "https://picsum.photos/seed/travel2/800/600",
+      "imageHint": "coastal journey"
+    }
+  ]
+}
