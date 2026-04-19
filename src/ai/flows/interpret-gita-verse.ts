@@ -43,17 +43,20 @@ const interpretGitaVerseFlow = ai.defineFlow(
   },
   async (input) => {
     let retries = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
     
     while (retries < maxRetries) {
       try {
         const { output } = await interpretGitaVersePrompt(input);
-        return output!;
+        if (!output) throw new Error('Empty response from AI');
+        return output;
       } catch (error: any) {
-        const isRateLimit = error.message?.includes('429') || error.status === 429;
+        const isRateLimit = error.message?.includes('429') || error.status === 429 || error.message?.includes('RESOURCE_EXHAUSTED');
         if (isRateLimit && retries < maxRetries - 1) {
           retries++;
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 1000));
+          // Exponential backoff
+          const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
         throw error;
