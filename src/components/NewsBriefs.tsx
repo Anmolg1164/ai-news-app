@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -117,9 +118,10 @@ function NewsBriefCard({ brief }: { brief: NewsBrief }) {
 interface NewsBriefsProps {
   category: string;
   country: string;
+  onIntelligenceClick?: () => void;
 }
 
-export function NewsBriefs({ category, country }: NewsBriefsProps) {
+export function NewsBriefs({ category, country, onIntelligenceClick }: NewsBriefsProps) {
   const [briefs, setBriefs] = useState<NewsBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -192,17 +194,28 @@ export function NewsBriefs({ category, country }: NewsBriefsProps) {
 
   return (
     <div className="grid gap-8">
-      <div className="flex items-center gap-3 px-2">
+      <div className="flex items-center justify-between gap-3 px-2">
         <div className="flex items-center gap-2">
           <Globe className="text-primary/40" size={24} />
           <h2 className="text-3xl font-headline font-bold text-primary tracking-tighter">
             {category} Briefings
           </h2>
         </div>
-        <div className="h-px flex-1 bg-primary/10" />
-        <span className="text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
-          {country} Feed
-        </span>
+        
+        <div className="flex items-center gap-4">
+          <span className="hidden sm:inline text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
+            {country} Feed
+          </span>
+          <Button 
+            onClick={onIntelligenceClick} 
+            variant="outline" 
+            size="sm"
+            className="rounded-full border-secondary/30 text-primary hover:bg-secondary/10 gap-2 h-8 px-4"
+          >
+            <Sparkles className="text-secondary" size={14} />
+            <span className="text-xs font-bold uppercase">AI Insights</span>
+          </Button>
+        </div>
       </div>
       
       <div className="grid gap-6">

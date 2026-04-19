@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Globe, Cpu, Coins, Trophy, Film, Loader2 } from "lucide-react";
+import { Globe, Cpu, Coins, Trophy, Film } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -15,20 +15,18 @@ const navItems = [
 ];
 
 interface NavigationProps {
-  onCategoryClick?: (category: string) => Promise<void>;
-  isProcessing?: boolean;
+  onCategoryClick?: (category: string) => void;
 }
 
-export function Navigation({ onCategoryClick, isProcessing }: NavigationProps) {
+export function Navigation({ onCategoryClick }: NavigationProps) {
   const pathname = usePathname();
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>("World");
 
-  const handleClick = async (label: string, e: React.MouseEvent) => {
+  const handleClick = (label: string, e: React.MouseEvent) => {
     if (onCategoryClick) {
       e.preventDefault();
       setActiveCategory(label);
-      await onCategoryClick(label);
-      setActiveCategory(null);
+      onCategoryClick(label);
     }
   };
 
@@ -36,7 +34,7 @@ export function Navigation({ onCategoryClick, isProcessing }: NavigationProps) {
     <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1 p-2 rounded-[2rem] glass z-50 shadow-2xl border-white/40">
       {navItems.map((item) => {
         const Icon = item.icon;
-        const isThisProcessing = isProcessing && activeCategory === item.label;
+        const isActive = activeCategory === item.label;
 
         return (
           <button
@@ -44,21 +42,19 @@ export function Navigation({ onCategoryClick, isProcessing }: NavigationProps) {
             onClick={(e) => handleClick(item.label, e)}
             className={cn(
               "flex flex-col items-center justify-center min-w-[70px] py-2 px-1 rounded-2xl transition-all duration-300 hover:bg-white/40 group relative",
-              activeCategory === item.label ? "bg-primary/10 text-primary" : "text-primary/60"
+              isActive ? "text-primary" : "text-primary/60"
             )}
-            disabled={isProcessing}
           >
             <div className={cn(
               "w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300",
-              activeCategory === item.label ? "bg-primary text-white scale-110 shadow-lg" : "group-hover:scale-110"
+              isActive ? "bg-primary text-white scale-110 shadow-lg" : "group-hover:scale-110"
             )}>
-              {isThisProcessing ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : (
-                <Icon size={20} />
-              )}
+              <Icon size={20} />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-tighter mt-1 opacity-80 group-hover:opacity-100">
+            <span className={cn(
+              "text-[10px] font-bold uppercase tracking-tighter mt-1 transition-opacity",
+              isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100"
+            )}>
               {item.label}
             </span>
           </button>

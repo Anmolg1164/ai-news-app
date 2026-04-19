@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -45,17 +46,28 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleCategoryClick = async (category: string) => {
+  const handleCategoryClick = (category: string) => {
     setActiveCategory(category);
-    // When category is clicked, we also trigger the detailed intelligence slide-out
+    // Removed automatic sheet opening and intelligence fetch from here
+    // as per user request to just render news.
+  };
+
+  const triggerIntelligence = async () => {
     setIsSheetOpen(true);
     setIsLoading(true);
     setIntelligenceData(null);
     try {
-      const result = await getJourneyIntelligence({ category: `${category} in ${activeCountry.name}` });
+      const result = await getJourneyIntelligence({ 
+        category: `${activeCategory} in ${activeCountry.name}` 
+      });
       setIntelligenceData(result);
     } catch (error) {
       console.error("Agentic intelligence failure:", error);
+      toast({
+        variant: "destructive",
+        title: "AI Analysis Busy",
+        description: "The agent is handling many requests. Please try again in a moment.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -165,7 +177,11 @@ export default function Home() {
           </aside>
 
           <section className="lg:col-span-8 space-y-8">
-            <NewsBriefs category={activeCategory} country={activeCountry.name} />
+            <NewsBriefs 
+              category={activeCategory} 
+              country={activeCountry.name} 
+              onIntelligenceClick={triggerIntelligence}
+            />
           </section>
         </div>
       </main>
@@ -185,7 +201,7 @@ export default function Home() {
         </SheetContent>
       </Sheet>
 
-      <Navigation onCategoryClick={handleCategoryClick} isProcessing={isLoading} />
+      <Navigation onCategoryClick={handleCategoryClick} />
 
       <button
         onClick={scrollToTop}
