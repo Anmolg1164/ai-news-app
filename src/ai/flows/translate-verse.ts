@@ -1,0 +1,49 @@
+'use server';
+/**
+ * @fileOverview A Genkit flow for translating Bhagavad Gita verses into a target language.
+ */
+
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+
+const TranslateVerseInputSchema = z.object({
+  verse: z.string().describe('The Sanskrit verse text.'),
+  english: z.string().describe('The English translation of the verse.'),
+  targetLanguage: z.string().describe('The language to translate the verse and its meaning into (e.g., Hindi, Spanish, French).'),
+});
+export type TranslateVerseInput = z.infer<typeof TranslateVerseInputSchema>;
+
+const TranslateVerseOutputSchema = z.object({
+  translatedVerse: z.string().describe('The translated verse text in the target language.'),
+  meaning: z.string().describe('A concise explanation of the meaning in the target language.'),
+});
+export type TranslateVerseOutput = z.infer<typeof TranslateVerseOutputSchema>;
+
+export async function translateVerse(input: TranslateVerseInput): Promise<TranslateVerseOutput> {
+  return translateVerseFlow(input);
+}
+
+const translateVersePrompt = ai.definePrompt({
+  name: 'translateVersePrompt',
+  input: { schema: TranslateVerseInputSchema },
+  output: { schema: TranslateVerseOutputSchema },
+  prompt: `You are an expert linguist and spiritual scholar.
+Translate the following Bhagavad Gita verse and its English meaning into {{{targetLanguage}}}.
+Provide a beautiful, poetic translation of the verse itself and a clear, simple explanation of its spiritual essence.
+
+Sanskrit: {{{verse}}}
+English: {{{english}}}
+Target Language: {{{targetLanguage}}}`,
+});
+
+const translateVerseFlow = ai.defineFlow(
+  {
+    name: 'translateVerseFlow',
+    inputSchema: TranslateVerseInputSchema,
+    outputSchema: TranslateVerseOutputSchema,
+  },
+  async (input) => {
+    const { output } = await translateVersePrompt(input);
+    return output!;
+  }
+);
