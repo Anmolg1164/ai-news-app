@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -5,7 +6,7 @@ import { Navigation } from "@/components/Navigation";
 import { TravelIntelligence } from "@/components/TravelIntelligence";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
-import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp, Languages, Zap } from "lucide-react";
+import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp, Languages, Zap, User, Settings, Bookmark, LogOut } from "lucide-react";
 import Image from "next/image";
 import { getJourneyIntelligence, type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -15,6 +16,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -56,7 +59,6 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Auto-request mic permission visually or via dummy call if needed
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => {});
     }
@@ -77,8 +79,9 @@ export default function Home() {
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && searchInput.trim()) {
       setSearchQuery(searchInput);
+      setActiveCategory("Discovery");
       if (newsScrollRef.current) {
         newsScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -112,23 +115,35 @@ export default function Home() {
     }
   };
 
+  const showNotifications = () => {
+    toast({
+      title: "All Caught Up!",
+      description: "You have no new notifications at this time.",
+    });
+  };
+
   if (!isMounted) return null;
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden relative" suppressHydrationWarning>
-      <header className="z-40 glass border-b border-white/40 flex-shrink-0 animate-in fade-in slide-in-from-top-6 duration-1000" suppressHydrationWarning>
-        <div className="container mx-auto px-6 h-24 flex items-center justify-between">
+      <header className="z-40 glass border-b border-white/40 flex-shrink-0" suppressHydrationWarning>
+        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4 group">
-            <div className="w-14 h-14 bg-gradient-to-tr from-primary to-secondary rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-xl shadow-primary/30 group-hover:rotate-6 transition-all duration-500 cursor-pointer relative overflow-hidden">
-               <div className="absolute inset-0 bg-white/20 animate-pulse" />
-               <Zap className="relative z-10" fill="currentColor" />
+            <div className="w-12 h-12 bg-gradient-to-tr from-primary to-secondary rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-xl shadow-primary/30 group-hover:rotate-6 transition-all duration-500 cursor-pointer relative overflow-hidden">
+               <Image 
+                src="https://picsum.photos/seed/user_profile/400/400" 
+                alt="Logo" 
+                fill
+                className="object-cover"
+                data-ai-hint="user logo"
+              />
             </div>
             <div>
-              <h1 className="text-3xl font-headline font-bold text-primary tracking-tighter leading-none">
+              <h1 className="text-2xl font-headline font-bold text-primary tracking-tighter leading-none">
                 G newsMola
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-muted-foreground opacity-60">
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[8px] uppercase tracking-[0.4em] font-bold text-muted-foreground opacity-60">
                   Neo Intelligence
                 </span>
                 <div className="h-1 w-1 bg-secondary rounded-full animate-ping" />
@@ -138,25 +153,25 @@ export default function Home() {
           
           <div className="hidden lg:flex flex-1 max-w-2xl mx-12 gap-4">
             <div className="relative flex-1 group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-all" size={20} />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-all" size={18} />
               <input 
                 type="text" 
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="What's the vibe in the world?" 
-                className="w-full bg-white/50 border border-primary/10 rounded-[2rem] py-4 pl-14 pr-4 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:bg-white transition-all shadow-sm font-medium"
+                className="w-full bg-white/50 border border-primary/10 rounded-[2rem] py-3 pl-12 pr-4 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:bg-white transition-all shadow-sm font-medium text-sm"
                 suppressHydrationWarning
               />
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-2xl border-white/60 bg-white/50 gap-2 h-14 px-6 hover:bg-white shadow-sm transition-all hover:scale-105 active:scale-95" suppressHydrationWarning>
-                    <MapPin size={18} className="text-secondary" />
-                    <span className="text-sm font-bold tracking-tight">{activeCountry.name}</span>
-                    <ChevronDown size={14} className="opacity-40" />
+                  <Button variant="outline" className="rounded-xl border-white/60 bg-white/50 gap-2 h-11 px-4 hover:bg-white shadow-sm transition-all" suppressHydrationWarning>
+                    <MapPin size={16} className="text-secondary" />
+                    <span className="text-xs font-bold tracking-tight">{activeCountry.name}</span>
+                    <ChevronDown size={12} className="opacity-40" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="glass border-white/60 min-w-[180px] p-2 rounded-2xl">
@@ -164,7 +179,7 @@ export default function Home() {
                     <DropdownMenuItem 
                       key={c.code} 
                       onClick={() => setActiveCountry(c)}
-                      className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-primary/5 text-primary"
+                      className="cursor-pointer font-bold py-2.5 px-4 rounded-xl m-1 hover:bg-primary/5 text-primary"
                     >
                       {c.name}
                     </DropdownMenuItem>
@@ -174,10 +189,10 @@ export default function Home() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-2xl border-white/60 bg-white/50 gap-2 h-14 px-6 hover:bg-white shadow-sm transition-all hover:scale-105 active:scale-95" suppressHydrationWarning>
-                    <Languages size={18} className="text-accent" />
-                    <span className="text-sm font-bold tracking-tight">{activeLanguage.name}</span>
-                    <ChevronDown size={14} className="opacity-40" />
+                  <Button variant="outline" className="rounded-xl border-white/60 bg-white/50 gap-2 h-11 px-4 hover:bg-white shadow-sm transition-all" suppressHydrationWarning>
+                    <Languages size={16} className="text-accent" />
+                    <span className="text-xs font-bold tracking-tight">{activeLanguage.name}</span>
+                    <ChevronDown size={12} className="opacity-40" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="glass border-white/60 min-w-[180px] p-2 rounded-2xl">
@@ -185,7 +200,7 @@ export default function Home() {
                     <DropdownMenuItem 
                       key={l.code} 
                       onClick={() => setActiveLanguage(l)}
-                      className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-accent/5 text-accent"
+                      className="cursor-pointer font-bold py-2.5 px-4 rounded-xl m-1 hover:bg-accent/5 text-accent"
                     >
                       {l.name}
                     </DropdownMenuItem>
@@ -195,21 +210,43 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <button className="relative group p-3 rounded-2xl hover:bg-white transition-all" suppressHydrationWarning>
-              <Bell size={24} className="text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="absolute top-3 right-3 w-3 h-3 bg-accent rounded-full border-2 border-white shadow-sm animate-pulse" />
+          <div className="flex items-center gap-4">
+            <button onClick={showNotifications} className="relative group p-2.5 rounded-xl hover:bg-white transition-all" suppressHydrationWarning>
+              <Bell size={22} className="text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-accent rounded-full border-2 border-white shadow-sm" />
             </button>
-            <div className="w-14 h-14 rounded-[1.2rem] overflow-hidden border-2 border-white shadow-xl cursor-pointer hover:ring-4 hover:ring-primary/10 transition-all hover:scale-110 active:scale-90">
-              <Image 
-                src="https://picsum.photos/seed/usergenz/200/200" 
-                alt="Profile" 
-                width={56} 
-                height={56}
-                className="object-cover"
-                data-ai-hint="user avatar"
-              />
-            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="w-11 h-11 rounded-xl overflow-hidden border-2 border-white shadow-xl cursor-pointer hover:ring-4 hover:ring-primary/10 transition-all hover:scale-105">
+                  <Image 
+                    src="https://picsum.photos/seed/usergenz/200/200" 
+                    alt="Profile" 
+                    width={44} 
+                    height={44}
+                    className="object-cover"
+                    data-ai-hint="user avatar"
+                  />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="glass border-white/60 min-w-[220px] p-2 rounded-2xl mr-4">
+                <DropdownMenuLabel className="font-headline text-primary font-bold px-4 py-3">Profile Account</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-primary/5" />
+                <DropdownMenuItem className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-primary/5 gap-3">
+                  <User size={18} /> My Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-primary/5 gap-3">
+                  <Bookmark size={18} /> Saved Briefs
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-primary/5 gap-3">
+                  <Settings size={18} /> App Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-primary/5" />
+                <DropdownMenuItem className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-destructive/5 text-destructive gap-3">
+                  <LogOut size={18} /> Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -230,13 +267,17 @@ export default function Home() {
               <p className="text-base opacity-80 leading-relaxed font-medium">
                 Switching up the vibe for <span className="text-secondary font-bold tracking-tight">{activeCountry.name}</span> articles in <span className="text-secondary font-bold tracking-tight">{activeLanguage.name}</span>.
               </p>
-              <button className="w-full py-5 rounded-[1.5rem] bg-secondary text-slate-900 font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg" suppressHydrationWarning>
-                Customize Experience
+              <button 
+                onClick={() => toast({ title: "Custom Preferences", description: "Coming soon in the next update!" })}
+                className="w-full py-5 rounded-[1.5rem] bg-secondary text-slate-900 font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg" 
+                suppressHydrationWarning
+              >
+                Set Preferences
               </button>
             </div>
           </aside>
 
-          <section className="lg:col-span-8 h-full overflow-hidden bento-card">
+          <section className="lg:col-span-8 h-full overflow-hidden flex flex-col relative bento-card">
             <NewsBriefs 
               category={activeCategory} 
               searchQuery={searchQuery}
@@ -246,6 +287,12 @@ export default function Home() {
               onScroll={handleScroll}
               ref={newsScrollRef}
             />
+            
+            <div className="absolute bottom-6 left-0 right-0 px-4 flex justify-center pointer-events-none">
+              <div className="pointer-events-auto">
+                <Navigation onCategoryClick={handleCategoryClick} activeCategory={activeCategory} />
+              </div>
+            </div>
           </section>
         </div>
       </main>
@@ -271,17 +318,15 @@ export default function Home() {
         </SheetContent>
       </Sheet>
 
-      <Navigation onCategoryClick={handleCategoryClick} />
-
       <button
         onClick={scrollToTop}
         className={cn(
-          "fixed bottom-36 right-12 p-6 rounded-[2rem] bg-primary text-white shadow-2xl transition-all duration-700 z-50 hover:scale-110 active:scale-90 hover:glow-primary",
+          "fixed bottom-32 right-12 p-5 rounded-2xl bg-primary text-white shadow-2xl transition-all duration-700 z-50 hover:scale-110 active:scale-90 hover:glow-primary",
           showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-32 pointer-events-none"
         )}
         suppressHydrationWarning
       >
-        <ArrowUp size={32} />
+        <ArrowUp size={28} />
       </button>
     </div>
   );

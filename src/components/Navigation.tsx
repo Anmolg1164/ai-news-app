@@ -1,8 +1,8 @@
+
 "use client";
 
 import { Globe, Cpu, Coins, Trophy, Film } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 
 const navItems = [
   { icon: Globe, label: "World", href: "/world" },
@@ -14,21 +14,19 @@ const navItems = [
 
 interface NavigationProps {
   onCategoryClick?: (category: string) => void;
+  activeCategory: string;
 }
 
-export function Navigation({ onCategoryClick }: NavigationProps) {
-  const [activeCategory, setActiveCategory] = useState<string>("World");
-
+export function Navigation({ onCategoryClick, activeCategory }: NavigationProps) {
   const handleClick = (label: string, e: React.MouseEvent) => {
     if (onCategoryClick) {
       e.preventDefault();
-      setActiveCategory(label);
       onCategoryClick(label);
     }
   };
 
   return (
-    <nav className="fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-3 p-3 rounded-[3rem] glass z-50 shadow-[0_30px_60px_rgba(0,0,0,0.12)] border-white/60 animate-in fade-in slide-in-from-bottom-12 duration-1000">
+    <nav className="flex items-center gap-2 p-2 rounded-[2rem] glass z-50 shadow-2xl border-white/60 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = activeCategory === item.label;
@@ -38,24 +36,22 @@ export function Navigation({ onCategoryClick }: NavigationProps) {
             key={item.label}
             onClick={(e) => handleClick(item.label, e)}
             className={cn(
-              "flex flex-col items-center justify-center min-w-[95px] py-4 px-2 rounded-[2.5rem] transition-all duration-500 group relative",
-              isActive ? "text-primary bg-primary/5 shadow-inner" : "text-muted-foreground hover:bg-white/60"
+              "flex items-center gap-2 py-2 px-4 rounded-[1.5rem] transition-all duration-500 group relative",
+              isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-white/60"
             )}
           >
-            <div className={cn(
-              "w-14 h-14 flex items-center justify-center rounded-[1.2rem] transition-all duration-500",
-              isActive ? "bg-primary text-white scale-110 shadow-lg shadow-primary/40 rotate-3" : "group-hover:scale-110 group-hover:text-primary"
-            )}>
-              <Icon size={26} />
-            </div>
+            <Icon size={18} className={cn(
+              "transition-all duration-500",
+              isActive ? "text-primary" : "group-hover:text-primary"
+            )} />
             <span className={cn(
-              "text-[10px] font-bold uppercase tracking-[0.2em] mt-3 transition-all duration-500",
-              isActive ? "opacity-100 transform translate-y-0" : "opacity-40 group-hover:opacity-100 group-hover:translate-y-[-2px]"
+              "text-[10px] font-bold uppercase tracking-[0.1em] transition-all duration-500",
+              isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100"
             )}>
               {item.label}
             </span>
             {isActive && (
-              <div className="absolute -bottom-2 w-2 h-2 bg-secondary rounded-full animate-in fade-in zoom-in" />
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-secondary rounded-full animate-in fade-in zoom-in" />
             )}
           </button>
         );
