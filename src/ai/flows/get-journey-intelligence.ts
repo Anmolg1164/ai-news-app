@@ -19,6 +19,10 @@ const JourneyIntelligenceOutputSchema = z.object({
   currency: z.string().nullable().describe('Local currency and approximate exchange rate to USD.'),
   travelAlert: z.string().nullable().describe('A brief travel advisory if applicable.'),
   sourceRegion: z.string().describe('The primary geographical region of the news sources (e.g. North America, Asia, Europe).'),
+  complexTerms: z.array(z.object({
+    term: z.string().describe('The complex term found in the summary.'),
+    explanation: z.string().describe('A 1-sentence ELIF explanation of the term.')
+  })).optional().describe('A list of complex terms and their simple explanations.')
 });
 export type JourneyIntelligenceOutput = z.infer<typeof JourneyIntelligenceOutputSchema>;
 
@@ -129,6 +133,7 @@ const journeyIntelligencePrompt = ai.definePrompt({
      - Identify the official currency code (ISO 4217, e.g., INR for India) and use "getExchangeRate" to get the latest USD conversion.
   5. Write a concise 2-sentence summary of the fetched news.
   6. Check for any specific travel warnings or alerts in the news and include them in travelAlert.
+  7. Identify up to 3 complex terms (economic, technical, or cultural) used in your summary. For each, provide a 1-sentence 'Explain Like I'm Five' (ELIF) definition in the complexTerms array.
   
   If no specific country is identified, set country, weather, and currency to null.`,
 });

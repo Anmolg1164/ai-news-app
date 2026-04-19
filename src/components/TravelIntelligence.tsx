@@ -15,10 +15,12 @@ import {
   Layers,
   Mic,
   MicOff,
-  Volume2
+  Volume2,
+  HelpCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
 import { getAlternativePerspective, type AlternativePerspectiveOutput } from "@/ai/flows/get-alternative-perspective";
 import { textToSpeech } from "@/ai/flows/tts-flow";
@@ -133,6 +135,57 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
     setShowAlt(!showAlt);
   };
 
+  const renderTextWithElif = (text: string, terms?: { term: string, explanation: string }[]) => {
+    if (!terms || terms.length === 0) return text;
+
+    let parts: (string | JSX.Element)[] = [text];
+
+    terms.forEach(({ term, explanation }) => {
+      const newParts: (string | JSX.Element)[] = [];
+      parts.forEach((part) => {
+        if (typeof part !== 'string') {
+          newParts.push(part);
+          return;
+        }
+
+        const regex = new RegExp(`(${term})`, 'gi');
+        const split = part.split(regex);
+        
+        split.forEach((subPart, i) => {
+          if (subPart.toLowerCase() === term.toLowerCase()) {
+            newParts.push(
+              <span key={`${term}-${i}`} className="inline-flex items-center gap-1 group">
+                <span className="font-bold border-b border-dotted border-primary/40 group-hover:border-primary transition-colors">
+                  {subPart}
+                </span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="text-secondary hover:text-primary transition-colors inline-flex">
+                      <HelpCircle size={14} className="mb-1" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 glass p-4 text-xs">
+                    <div className="space-y-1">
+                      <p className="font-bold text-primary uppercase tracking-tighter">Explain Like I'm Five</p>
+                      <p className="text-primary/80 leading-relaxed italic">
+                        "{explanation}"
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </span>
+            );
+          } else if (subPart !== '') {
+            newParts.push(subPart);
+          }
+        });
+      });
+      parts = newParts;
+    });
+
+    return <>{parts}</>;
+  };
+
   if (data) {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -166,23 +219,23 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
             )}
           </div>
 
-          <div className="relative overflow-hidden min-h-[80px]">
-            <div className={`transition-all duration-500 ${showAlt ? "-translate-x-full opacity-0 absolute" : "translate-x-0 opacity-100"}`}>
-              <p className="text-primary font-medium leading-relaxed">
-                {data.summary}
-              </p>
+          <div className="relative min-h-[80px]">
+            <div className={`transition-all duration-500 ${showAlt ? "opacity-0 invisible h-0" : "opacity-100 visible"}`}>
+              <div className="text-primary font-medium leading-relaxed">
+                {renderTextWithElif(data.summary, data.complexTerms)}
+              </div>
             </div>
             
             {altPerspective && (
-              <div className={`transition-all duration-500 ${showAlt ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 absolute"}`}>
+              <div className={`transition-all duration-500 ${showAlt ? "opacity-100 visible" : "opacity-0 invisible h-0"}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground text-[10px]">
                     {altPerspective.altRegion} Perspective
                   </Badge>
                 </div>
-                <p className="text-primary font-medium leading-relaxed italic">
-                  {altPerspective.altSummary}
-                </p>
+                <div className="text-primary font-medium leading-relaxed italic">
+                  {renderTextWithElif(altPerspective.altSummary, altPerspective.complexTerms)}
+                </div>
               </div>
             )}
           </div>
