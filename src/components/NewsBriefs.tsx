@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe, Languages, RefreshCw } from "lucide-react";
+import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe, Languages, RefreshCw, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAlternativePerspective, type AlternativePerspectiveOutput } from "@/ai/flows/get-alternative-perspective";
 import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
@@ -33,7 +33,6 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
   const translationCache = useRef<Record<string, TranslateNewsOutput>>({});
   const { toast } = useToast();
 
-  // Intersection Observer to detect when the card is "seen"
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -68,7 +67,6 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
     setIsTranslating(true);
     setHasError(false);
     
-    // Add a small jittered delay even for lazy loading to prevent bursts
     await new Promise(resolve => setTimeout(resolve, Math.random() * 800));
 
     try {
@@ -80,14 +78,12 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
       translationCache.current[cacheKey] = result;
       setTranslatedData(result);
     } catch (error: any) {
-      console.error("Translation failed:", error);
       setHasError(true);
-      // Only toast once for errors to avoid noise
       if (index === 0) {
         toast({
           variant: "destructive",
-          title: "Translation Service Busy",
-          description: "The AI agent is handling many requests. Click retry if needed.",
+          title: "AI Stressed",
+          description: " Gemini is taking a breather. Hit retry in a sec.",
         });
       }
     } finally {
@@ -95,7 +91,6 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
     }
   }, [brief.id, brief.title, brief.content, index, toast]);
 
-  // Only trigger translation if language is NOT English AND the card is visible to the user
   useEffect(() => {
     if (isVisible && language !== "English" && !translatedData && !isTranslating) {
       handleTranslation(language);
@@ -115,8 +110,8 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
       } catch (error) {
         toast({
           variant: "destructive",
-          title: "Perspective Switch Busy",
-          description: "The AI is at its limit. Please try again in a moment.",
+          title: "Perspective Busy",
+          description: "Searching global sources... try again soon.",
         });
       } finally {
         setIsLoading(false);
@@ -130,62 +125,64 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
 
   return (
     <div ref={cardRef}>
-      <Card className="border-none glass overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:bg-white/40">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-secondary-foreground bg-secondary/30 px-2 py-1 rounded-md uppercase tracking-wider">
+      <Card className="border-none glass overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 rounded-[2.5rem] group/card">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-bold text-white bg-primary px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg shadow-primary/20">
                 {brief.category}
               </span>
               {isTranslating && (
-                <span className="flex items-center gap-1 text-[8px] font-bold text-primary/40 uppercase animate-pulse">
-                  <Languages size={10} /> {language}...
-                </span>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-full text-[10px] font-bold text-accent animate-pulse">
+                  <Languages size={12} /> {language.toUpperCase()}
+                </div>
               )}
               {hasError && (
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   onClick={() => handleTranslation(language)}
-                  className="h-5 px-1 text-[8px] text-destructive hover:text-destructive flex items-center gap-1"
+                  className="h-8 px-3 text-[10px] font-bold text-destructive hover:bg-destructive/5 rounded-full flex items-center gap-2"
                 >
-                  <RefreshCw size={8} /> Retry
+                  <RefreshCw size={12} /> RETRY
                 </Button>
               )}
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium">
-              <Calendar size={12} />
-              {brief.publishedAt || "Recently"}
+            <div className="flex items-center gap-2 text-muted-foreground/60 text-xs font-bold uppercase tracking-tighter">
+              <Calendar size={14} />
+              {brief.publishedAt || "Live Now"}
             </div>
           </div>
-          <CardTitle className="text-xl font-headline text-primary font-bold tracking-tight">
+          <CardTitle className="text-2xl font-headline text-primary font-bold tracking-tighter leading-tight group-hover/card:text-secondary transition-colors duration-500">
             {currentTitle}
           </CardTitle>
         </CardHeader>
         
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="relative">
-            <div className={`transition-all duration-500 ${showAlt ? "opacity-30 blur-[1px]" : "opacity-100"}`}>
-              <p className="text-primary/70 leading-relaxed text-sm">
+            <div className={`transition-all duration-700 ${showAlt ? "opacity-20 blur-md scale-95" : "opacity-100"}`}>
+              <p className="text-primary/70 leading-relaxed text-base font-medium">
                 {currentContent}
               </p>
             </div>
 
             {showAlt && (
-              <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-xl p-1 animate-in fade-in duration-500">
-                <div className="h-full border-2 border-dashed border-secondary/30 rounded-lg p-4 bg-secondary/5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="text-secondary" size={16} />
-                    <h4 className="text-sm font-bold text-primary uppercase tracking-tighter">Alternative Viewpoint</h4>
+              <div className="absolute inset-0 bg-white/5 rounded-3xl p-1 animate-in fade-in zoom-in duration-500">
+                <div className="h-full border-2 border-dashed border-secondary/40 rounded-[2rem] p-6 bg-secondary/5 backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-secondary/20 rounded-xl">
+                      <Sparkles className="text-secondary" size={18} />
+                    </div>
+                    <h4 className="text-sm font-bold text-primary uppercase tracking-widest">Global Pivot</h4>
                   </div>
                   {isLoading ? (
-                    <div className="flex items-center gap-2 text-primary/60 text-sm animate-pulse">
-                      <Loader2 size={14} className="animate-spin" />
-                      Searching diverse sources...
+                    <div className="flex flex-col items-center justify-center h-24 gap-4">
+                      <Loader2 size={24} className="animate-spin text-secondary" />
+                      <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary/60">Decoding perspectives</span>
                     </div>
                   ) : (
-                    <p className="text-primary/80 text-sm leading-relaxed italic">
-                      {altData?.altSummary}
+                    <p className="text-primary/90 text-sm leading-relaxed italic font-medium">
+                      "{altData?.altSummary}"
                     </p>
                   )}
                 </div>
@@ -194,24 +191,24 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
           </div>
         </CardContent>
 
-        <CardFooter className="flex justify-between items-center pt-0 border-t border-primary/5 mt-2 pt-4">
+        <CardFooter className="flex justify-between items-center pt-6 border-t border-primary/5 mx-6 mb-6">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={handleToggle}
-            className={`gap-2 h-8 text-[10px] font-bold uppercase tracking-widest transition-colors ${showAlt ? 'text-secondary' : 'text-primary/60 hover:text-primary'}`}
+            className={`gap-3 h-10 px-6 rounded-full text-xs font-bold uppercase tracking-[0.2em] transition-all ${showAlt ? 'bg-secondary text-primary shadow-lg shadow-secondary/20' : 'text-primary/40 hover:bg-primary/5 hover:text-primary'}`}
           >
-            <ArrowLeftRight size={14} />
-            {showAlt ? "Original Feed" : "Perspective Switch"}
+            <ArrowLeftRight size={16} />
+            {showAlt ? "Original" : "Pivot View"}
           </Button>
           {brief.url && brief.url.startsWith('http') && (
             <a 
               href={brief.url} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-[10px] font-bold text-primary/40 hover:text-secondary uppercase tracking-widest transition-colors"
+              className="group/link flex items-center gap-2 text-xs font-bold text-primary/40 hover:text-accent uppercase tracking-widest transition-all"
             >
-              Full Coverage <ExternalLink size={12} />
+              Coverage <ExternalLink size={14} className="group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform" />
             </a>
           )}
         </CardFooter>
@@ -263,11 +260,11 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
 
       const newBriefs = (parsed.results || []).map((r: any, idx: number) => ({
         id: `news-${isInitial ? 'init' : 'more'}-${idx}-${Date.now()}`,
-        title: r.title || "Headline",
-        content: r.description || "Latest update available.",
+        title: r.title || "Latest Headline",
+        content: r.description || r.content || "Context loading from sources...",
         url: r.link,
-        category: searchQuery ? "Search" : category,
-        publishedAt: r.pubDate ? new Date(r.pubDate).toLocaleDateString() : new Date().toLocaleDateString()
+        category: searchQuery ? "Discovery" : category,
+        publishedAt: r.pubDate ? new Date(r.pubDate).toLocaleDateString() : "Just Now"
       }));
 
       if (isInitial) {
@@ -277,11 +274,10 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       }
       setNextPage(parsed.nextPage);
     } catch (error) {
-      console.error("Live news fetch failed:", error);
       toast({
         variant: "destructive",
-        title: "News Service Busy",
-        description: "Could not fetch latest updates. Please try again shortly.",
+        title: "Feed Offline",
+        description: "News sources are a bit overwhelmed. Try a fresh category.",
       });
     } finally {
       setLoading(false);
@@ -307,27 +303,30 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
   }, [loading, loadingMore, nextPage, fetchLiveNews]);
 
   return (
-    <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <div className="flex items-center justify-between gap-3 px-2 py-4 flex-shrink-0 bg-background/80 backdrop-blur-sm z-10">
-        <div className="flex items-center gap-2">
-          <Globe className="text-primary/40" size={24} />
-          <h2 className="text-3xl font-headline font-bold text-primary tracking-tighter">
-            {searchQuery ? `Results for "${searchQuery}"` : `${category} Briefings`}
-          </h2>
+    <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-10 duration-1000">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-4 py-8 flex-shrink-0 bg-background/40 backdrop-blur-xl z-20">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+            <Globe size={28} className="animate-spin-slow" />
+          </div>
+          <div>
+            <h2 className="text-4xl font-headline font-bold text-primary tracking-tighter">
+              {searchQuery ? `"${searchQuery}"` : `${category} Feed`}
+            </h2>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="h-2 w-2 bg-secondary rounded-full animate-pulse" />
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Live Updates for {country}</span>
+            </div>
+          </div>
         </div>
         
         <div className="flex items-center gap-4">
-          <span className="hidden sm:inline text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
-            {country} ({language}) Feed
-          </span>
           <Button 
             onClick={onIntelligenceClick} 
-            variant="outline" 
-            size="sm"
-            className="rounded-full border-secondary/30 text-primary hover:bg-secondary/10 gap-2 h-8 px-4"
+            className="rounded-2xl bg-gradient-to-r from-primary to-secondary text-white hover:scale-105 active:scale-95 transition-all gap-3 h-14 px-8 shadow-xl shadow-primary/20"
           >
-            <Sparkles className="text-secondary" size={14} />
-            <span className="text-xs font-bold uppercase">AI Insights</span>
+            <Sparkles className="animate-pulse" size={20} />
+            <span className="text-sm font-bold uppercase tracking-tight">AI Insights</span>
           </Button>
         </div>
       </div>
@@ -335,12 +334,12 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       <div 
         ref={ref}
         onScroll={onScroll}
-        className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-6 pb-40"
+        className="flex-1 overflow-y-auto custom-scrollbar px-2 space-y-10 pb-48 pt-4"
       >
         {loading ? (
-          <div className="space-y-6">
+          <div className="space-y-10">
             {[1, 2, 3].map(i => (
-              <Skeleton key={i} className="h-48 w-full rounded-2xl glass" />
+              <Skeleton key={i} className="h-64 w-full rounded-[2.5rem] glass" />
             ))}
           </div>
         ) : briefs.length > 0 ? (
@@ -353,15 +352,19 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
             );
           })
         ) : (
-          <div className="flex flex-col items-center justify-center p-12 glass rounded-3xl text-center space-y-4">
-            <Newspaper className="text-primary/20" size={48} />
-            <p className="text-primary/40 font-bold uppercase tracking-widest text-xs">No active headlines for this selection</p>
+          <div className="flex flex-col items-center justify-center p-20 glass rounded-[3rem] text-center space-y-6">
+            <div className="p-6 bg-primary/5 rounded-full">
+              <Newspaper className="text-primary/20" size={64} />
+            </div>
+            <p className="text-primary/40 font-bold uppercase tracking-[0.4em] text-sm">Quiet moment in the world</p>
+            <Button variant="outline" onClick={() => fetchLiveNews(true)} className="rounded-xl">Refresh Feed</Button>
           </div>
         )}
 
         {loadingMore && (
-          <div className="flex justify-center p-8">
-            <Loader2 className="animate-spin text-primary" size={32} />
+          <div className="flex flex-col items-center justify-center p-12 gap-4">
+            <Loader2 className="animate-spin text-primary" size={40} />
+            <span className="text-[10px] font-bold text-primary/40 uppercase tracking-widest">More intel loading</span>
           </div>
         )}
       </div>

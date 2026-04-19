@@ -5,7 +5,7 @@ import { Navigation } from "@/components/Navigation";
 import { TravelIntelligence } from "@/components/TravelIntelligence";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
-import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp, Languages } from "lucide-react";
+import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp, Languages, Zap } from "lucide-react";
 import Image from "next/image";
 import { getJourneyIntelligence, type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -56,6 +56,10 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
+    // Auto-request mic permission visually or via dummy call if needed
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => {});
+    }
   }, []);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -111,33 +115,37 @@ export default function Home() {
   if (!isMounted) return null;
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden" suppressHydrationWarning>
-      <header className="z-40 glass border-b border-primary/5 flex-shrink-0 animate-in fade-in slide-in-from-top-4 duration-700" suppressHydrationWarning>
-        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform cursor-pointer">
-              GM
+    <div className="h-screen flex flex-col bg-background overflow-hidden relative" suppressHydrationWarning>
+      <header className="z-40 glass border-b border-white/40 flex-shrink-0 animate-in fade-in slide-in-from-top-6 duration-1000" suppressHydrationWarning>
+        <div className="container mx-auto px-6 h-24 flex items-center justify-between">
+          <div className="flex items-center gap-4 group">
+            <div className="w-14 h-14 bg-gradient-to-tr from-primary to-secondary rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-xl shadow-primary/30 group-hover:rotate-6 transition-all duration-500 cursor-pointer relative overflow-hidden">
+               <div className="absolute inset-0 bg-white/20 animate-pulse" />
+               <Zap className="relative z-10" fill="currentColor" />
             </div>
             <div>
-              <h1 className="text-2xl font-headline font-bold text-primary tracking-tighter leading-none">
+              <h1 className="text-3xl font-headline font-bold text-primary tracking-tighter leading-none">
                 G newsMola
               </h1>
-              <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-muted-foreground opacity-60">
-                Agentic Briefings
-              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-muted-foreground opacity-60">
+                  Neo Intelligence
+                </span>
+                <div className="h-1 w-1 bg-secondary rounded-full animate-ping" />
+              </div>
             </div>
           </div>
           
-          <div className="hidden md:flex flex-1 max-w-2xl mx-12 gap-4">
+          <div className="hidden lg:flex flex-1 max-w-2xl mx-12 gap-4">
             <div className="relative flex-1 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-all" size={20} />
               <input 
                 type="text" 
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                placeholder="Search world events..." 
-                className="w-full bg-white/40 border border-primary/10 rounded-2xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all shadow-sm"
+                placeholder="What's the vibe in the world?" 
+                className="w-full bg-white/50 border border-primary/10 rounded-[2rem] py-4 pl-14 pr-4 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:bg-white transition-all shadow-sm font-medium"
                 suppressHydrationWarning
               />
             </div>
@@ -145,18 +153,18 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-2xl border-primary/10 bg-white/40 gap-2 h-12 px-4 hover:bg-white shadow-sm transition-all" suppressHydrationWarning>
-                    <MapPin size={16} className="text-accent" />
-                    <span className="text-xs font-bold uppercase tracking-wider">{activeCountry.name}</span>
+                  <Button variant="outline" className="rounded-2xl border-white/60 bg-white/50 gap-2 h-14 px-6 hover:bg-white shadow-sm transition-all hover:scale-105 active:scale-95" suppressHydrationWarning>
+                    <MapPin size={18} className="text-secondary" />
+                    <span className="text-sm font-bold tracking-tight">{activeCountry.name}</span>
                     <ChevronDown size={14} className="opacity-40" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="glass min-w-[160px]">
+                <DropdownMenuContent className="glass border-white/60 min-w-[180px] p-2 rounded-2xl">
                   {COUNTRIES.map((c) => (
                     <DropdownMenuItem 
                       key={c.code} 
                       onClick={() => setActiveCountry(c)}
-                      className="cursor-pointer font-medium py-2 px-4 rounded-lg m-1"
+                      className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-primary/5 text-primary"
                     >
                       {c.name}
                     </DropdownMenuItem>
@@ -166,18 +174,18 @@ export default function Home() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-2xl border-primary/10 bg-white/40 gap-2 h-12 px-4 hover:bg-white shadow-sm transition-all" suppressHydrationWarning>
-                    <Languages size={16} className="text-accent" />
-                    <span className="text-xs font-bold uppercase tracking-wider">{activeLanguage.name}</span>
+                  <Button variant="outline" className="rounded-2xl border-white/60 bg-white/50 gap-2 h-14 px-6 hover:bg-white shadow-sm transition-all hover:scale-105 active:scale-95" suppressHydrationWarning>
+                    <Languages size={18} className="text-accent" />
+                    <span className="text-sm font-bold tracking-tight">{activeLanguage.name}</span>
                     <ChevronDown size={14} className="opacity-40" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="glass min-w-[160px]">
+                <DropdownMenuContent className="glass border-white/60 min-w-[180px] p-2 rounded-2xl">
                   {LANGUAGES.map((l) => (
                     <DropdownMenuItem 
                       key={l.code} 
                       onClick={() => setActiveLanguage(l)}
-                      className="cursor-pointer font-medium py-2 px-4 rounded-lg m-1"
+                      className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-accent/5 text-accent"
                     >
                       {l.name}
                     </DropdownMenuItem>
@@ -187,17 +195,17 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex items-center gap-5">
-            <button className="relative group p-2 rounded-xl hover:bg-white transition-all" suppressHydrationWarning>
-              <Bell size={22} className="text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-secondary rounded-full border-2 border-white animate-pulse" />
+          <div className="flex items-center gap-6">
+            <button className="relative group p-3 rounded-2xl hover:bg-white transition-all" suppressHydrationWarning>
+              <Bell size={24} className="text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="absolute top-3 right-3 w-3 h-3 bg-accent rounded-full border-2 border-white shadow-sm animate-pulse" />
             </button>
-            <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-white shadow-md cursor-pointer hover:ring-4 hover:ring-primary/5 transition-all">
+            <div className="w-14 h-14 rounded-[1.2rem] overflow-hidden border-2 border-white shadow-xl cursor-pointer hover:ring-4 hover:ring-primary/10 transition-all hover:scale-110 active:scale-90">
               <Image 
-                src="https://picsum.photos/seed/user1/100/100" 
+                src="https://picsum.photos/seed/usergenz/200/200" 
                 alt="Profile" 
-                width={44} 
-                height={44}
+                width={56} 
+                height={56}
                 className="object-cover"
                 data-ai-hint="user avatar"
               />
@@ -207,25 +215,28 @@ export default function Home() {
       </header>
 
       <main className="flex-1 overflow-hidden container mx-auto px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 h-full py-10">
-          <aside className="lg:col-span-4 space-y-10 overflow-y-auto pr-4 custom-scrollbar hidden lg:block animate-in fade-in slide-in-from-left-8 duration-1000">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full py-8">
+          <aside className="lg:col-span-4 space-y-8 overflow-y-auto pr-2 custom-scrollbar hidden lg:block animate-in fade-in slide-in-from-left-10 duration-1000">
             <GitaWisdom isListening={isUserSpeaking} />
             
-            <div className="p-8 rounded-[2.5rem] glass-dark text-white space-y-6 relative overflow-hidden group">
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-secondary/20 rounded-full blur-3xl group-hover:bg-secondary/30 transition-all duration-700" />
-              <div className="flex items-center gap-3 font-headline font-bold text-xl">
-                <Sparkles className="text-secondary animate-pulse" /> Local Expedition
+            <div className="p-8 rounded-[3rem] glass-dark text-white space-y-6 relative overflow-hidden group hover:glow-secondary transition-all duration-500">
+              <div className="absolute -top-10 -right-10 w-48 h-48 bg-secondary/30 rounded-full blur-[80px] group-hover:scale-150 transition-all duration-1000" />
+              <div className="flex items-center gap-4 font-headline font-bold text-2xl">
+                <div className="p-2 bg-secondary/20 rounded-xl">
+                  <Sparkles className="text-secondary animate-pulse" />
+                </div>
+                Deep Dive
               </div>
-              <p className="text-sm opacity-70 leading-relaxed font-medium">
-                Your news feed is currently optimized for <span className="text-secondary font-bold">{activeCountry.name}</span> in <span className="text-secondary font-bold">{activeLanguage.name}</span>.
+              <p className="text-base opacity-80 leading-relaxed font-medium">
+                Switching up the vibe for <span className="text-secondary font-bold tracking-tight">{activeCountry.name}</span> articles in <span className="text-secondary font-bold tracking-tight">{activeLanguage.name}</span>.
               </p>
-              <button className="w-full py-4 rounded-2xl bg-secondary text-slate-900 font-bold hover:glow-secondary transition-all hover:scale-[1.02]" suppressHydrationWarning>
-                Refine Preferences
+              <button className="w-full py-5 rounded-[1.5rem] bg-secondary text-slate-900 font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg" suppressHydrationWarning>
+                Customize Experience
               </button>
             </div>
           </aside>
 
-          <section className="lg:col-span-8 h-full overflow-hidden">
+          <section className="lg:col-span-8 h-full overflow-hidden bento-card">
             <NewsBriefs 
               category={activeCategory} 
               searchQuery={searchQuery}
@@ -240,11 +251,14 @@ export default function Home() {
       </main>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent side="right" className="w-[400px] sm:w-[540px] glass border-l-primary/10 overflow-y-auto p-0">
-          <div className="p-8">
-            <SheetHeader className="mb-8">
-              <SheetTitle className="text-3xl font-headline font-bold text-primary flex items-center gap-3">
-                <Sparkles className="text-secondary" /> Agentic Intelligence
+        <SheetContent side="right" className="w-[400px] sm:w-[580px] glass border-l-white/60 overflow-y-auto p-0 rounded-l-[3rem]">
+          <div className="p-10">
+            <SheetHeader className="mb-10">
+              <SheetTitle className="text-4xl font-headline font-bold text-primary flex items-center gap-4">
+                <div className="p-3 bg-secondary/20 rounded-2xl">
+                  <Sparkles className="text-secondary" />
+                </div>
+                AI Agent
               </SheetTitle>
             </SheetHeader>
             <TravelIntelligence 
@@ -262,12 +276,12 @@ export default function Home() {
       <button
         onClick={scrollToTop}
         className={cn(
-          "fixed bottom-32 right-10 p-5 rounded-3xl bg-primary text-white shadow-2xl transition-all duration-500 z-50 hover:scale-110 active:scale-95 glow-primary",
-          showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20 pointer-events-none"
+          "fixed bottom-36 right-12 p-6 rounded-[2rem] bg-primary text-white shadow-2xl transition-all duration-700 z-50 hover:scale-110 active:scale-90 hover:glow-primary",
+          showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-32 pointer-events-none"
         )}
         suppressHydrationWarning
       >
-        <ArrowUp size={28} />
+        <ArrowUp size={32} />
       </button>
     </div>
   );
