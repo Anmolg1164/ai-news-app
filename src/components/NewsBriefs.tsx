@@ -24,14 +24,34 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
   const [altData, setAltData] = useState<AlternativePerspectiveOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   
   const [translatedData, setTranslatedData] = useState<TranslateNewsOutput | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   
+  const cardRef = useRef<HTMLDivElement>(null);
   const translationCache = useRef<Record<string, TranslateNewsOutput>>({});
   const { toast } = useToast();
 
-  const handleTranslation = async (targetLang: string) => {
+  // Intersection Observer to detect when the card is "seen"
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handleTranslation = useCallback(async (targetLang: string) => {
     if (targetLang === "English") {
       setTranslatedData(null);
       setHasError(false);
@@ -48,8 +68,8 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
     setIsTranslating(true);
     setHasError(false);
     
-    // Significantly staggered requests to respect free tier RPM (15-20 RPM)
-    await new Promise(resolve => setTimeout(resolve, index * 1500));
+    // Add a small jittered delay even for lazy loading to prevent bursts
+    await new Promise(resolve => setTimeout(resolve, Math.random() * 800));
 
     try {
       const result = await translateNews({
@@ -62,21 +82,25 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
     } catch (error: any) {
       console.error("Translation failed:", error);
       setHasError(true);
-      if (index === 0) { // Only toast once for the first card to avoid toast flood
+      // Only toast once for errors to avoid noise
+      if (index === 0) {
         toast({
           variant: "destructive",
           title: "Translation Service Busy",
-          description: "The AI agent is handling many requests. Retrying in background...",
+          description: "The AI agent is handling many requests. Click retry if needed.",
         });
       }
     } finally {
       setIsTranslating(false);
     }
-  };
+  }, [brief.id, brief.title, brief.content, index, toast]);
 
+  // Only trigger translation if language is NOT English AND the card is visible to the user
   useEffect(() => {
-    handleTranslation(language);
-  }, [language, brief.id]);
+    if (isVisible && language !== "English" && !translatedData && !isTranslating) {
+      handleTranslation(language);
+    }
+  }, [isVisible, language, translatedData, isTranslating, handleTranslation]);
 
   const handleToggle = async () => {
     if (!showAlt && !altData) {
@@ -92,7 +116,7 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
         toast({
           variant: "destructive",
           title: "Perspective Switch Busy",
-          description: "The AI is at its limit. Please try again in 1 minute.",
+          description: "The AI is at its limit. Please try again in a moment.",
         });
       } finally {
         setIsLoading(false);
@@ -105,92 +129,94 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
   const currentContent = translatedData?.translatedContent || brief.content;
 
   return (
-    <Card className="border-none glass overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:bg-white/40">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-secondary-foreground bg-secondary/30 px-2 py-1 rounded-md uppercase tracking-wider">
-              {brief.category}
-            </span>
-            {isTranslating && (
-              <span className="flex items-center gap-1 text-[8px] font-bold text-primary/40 uppercase animate-pulse">
-                <Languages size={10} /> {language}...
+    <div ref={cardRef}>
+      <Card className="border-none glass overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:bg-white/40">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-secondary-foreground bg-secondary/30 px-2 py-1 rounded-md uppercase tracking-wider">
+                {brief.category}
               </span>
-            )}
-            {hasError && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => handleTranslation(language)}
-                className="h-5 px-1 text-[8px] text-destructive hover:text-destructive flex items-center gap-1"
-              >
-                <RefreshCw size={8} /> Retry
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium">
-            <Calendar size={12} />
-            {brief.publishedAt || "Recently"}
-          </div>
-        </div>
-        <CardTitle className="text-xl font-headline text-primary font-bold tracking-tight">
-          {currentTitle}
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <div className="relative">
-          <div className={`transition-all duration-500 ${showAlt ? "opacity-30 blur-[1px]" : "opacity-100"}`}>
-            <p className="text-primary/70 leading-relaxed text-sm">
-              {currentContent}
-            </p>
-          </div>
-
-          {showAlt && (
-            <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-xl p-1 animate-in fade-in duration-500">
-              <div className="h-full border-2 border-dashed border-secondary/30 rounded-lg p-4 bg-secondary/5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="text-secondary" size={16} />
-                  <h4 className="text-sm font-bold text-primary uppercase tracking-tighter">Alternative Viewpoint</h4>
-                </div>
-                {isLoading ? (
-                  <div className="flex items-center gap-2 text-primary/60 text-sm animate-pulse">
-                    <Loader2 size={14} className="animate-spin" />
-                    Searching diverse sources...
-                  </div>
-                ) : (
-                  <p className="text-primary/80 text-sm leading-relaxed italic">
-                    {altData?.altSummary}
-                  </p>
-                )}
-              </div>
+              {isTranslating && (
+                <span className="flex items-center gap-1 text-[8px] font-bold text-primary/40 uppercase animate-pulse">
+                  <Languages size={10} /> {language}...
+                </span>
+              )}
+              {hasError && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => handleTranslation(language)}
+                  className="h-5 px-1 text-[8px] text-destructive hover:text-destructive flex items-center gap-1"
+                >
+                  <RefreshCw size={8} /> Retry
+                </Button>
+              )}
             </div>
-          )}
-        </div>
-      </CardContent>
+            <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium">
+              <Calendar size={12} />
+              {brief.publishedAt || "Recently"}
+            </div>
+          </div>
+          <CardTitle className="text-xl font-headline text-primary font-bold tracking-tight">
+            {currentTitle}
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          <div className="relative">
+            <div className={`transition-all duration-500 ${showAlt ? "opacity-30 blur-[1px]" : "opacity-100"}`}>
+              <p className="text-primary/70 leading-relaxed text-sm">
+                {currentContent}
+              </p>
+            </div>
 
-      <CardFooter className="flex justify-between items-center pt-0 border-t border-primary/5 mt-2 pt-4">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleToggle}
-          className={`gap-2 h-8 text-[10px] font-bold uppercase tracking-widest transition-colors ${showAlt ? 'text-secondary' : 'text-primary/60 hover:text-primary'}`}
-        >
-          <ArrowLeftRight size={14} />
-          {showAlt ? "Original Feed" : "Perspective Switch"}
-        </Button>
-        {brief.url && brief.url.startsWith('http') && (
-          <a 
-            href={brief.url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-[10px] font-bold text-primary/40 hover:text-secondary uppercase tracking-widest transition-colors"
+            {showAlt && (
+              <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-xl p-1 animate-in fade-in duration-500">
+                <div className="h-full border-2 border-dashed border-secondary/30 rounded-lg p-4 bg-secondary/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="text-secondary" size={16} />
+                    <h4 className="text-sm font-bold text-primary uppercase tracking-tighter">Alternative Viewpoint</h4>
+                  </div>
+                  {isLoading ? (
+                    <div className="flex items-center gap-2 text-primary/60 text-sm animate-pulse">
+                      <Loader2 size={14} className="animate-spin" />
+                      Searching diverse sources...
+                    </div>
+                  ) : (
+                    <p className="text-primary/80 text-sm leading-relaxed italic">
+                      {altData?.altSummary}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+
+        <CardFooter className="flex justify-between items-center pt-0 border-t border-primary/5 mt-2 pt-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleToggle}
+            className={`gap-2 h-8 text-[10px] font-bold uppercase tracking-widest transition-colors ${showAlt ? 'text-secondary' : 'text-primary/60 hover:text-primary'}`}
           >
-            Full Coverage <ExternalLink size={12} />
-          </a>
-        )}
-      </CardFooter>
-    </Card>
+            <ArrowLeftRight size={14} />
+            {showAlt ? "Original Feed" : "Perspective Switch"}
+          </Button>
+          {brief.url && brief.url.startsWith('http') && (
+            <a 
+              href={brief.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-[10px] font-bold text-primary/40 hover:text-secondary uppercase tracking-widest transition-colors"
+            >
+              Full Coverage <ExternalLink size={12} />
+            </a>
+          )}
+        </CardFooter>
+      </Card>
+    </div>
   );
 }
 
