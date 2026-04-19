@@ -1,13 +1,37 @@
+"use client";
+
+import { useState } from "react";
 import { Navigation } from "@/components/Navigation";
 import { TravelIntelligence } from "@/components/TravelIntelligence";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
-import { MapPin, Search, Bell } from "lucide-react";
+import { MapPin, Search, Bell, Sparkles } from "lucide-react";
 import Image from "next/image";
+import { getJourneyIntelligence, type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 export default function Home() {
+  const [intelligenceData, setIntelligenceData] = useState<JourneyIntelligenceOutput | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleCategoryClick = async (category: string) => {
+    setIsLoading(true);
+    try {
+      const result = await getJourneyIntelligence({ category });
+      setIntelligenceData(result);
+      if (result.country) {
+        setIsSheetOpen(true);
+      }
+    } catch (error) {
+      console.error("Agentic intelligence failure:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-screen pb-32 bg-background/50">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-primary/5">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -99,7 +123,18 @@ export default function Home() {
         </div>
       </main>
 
-      <Navigation />
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent side="right" className="w-[400px] sm:w-[540px] glass border-l-primary/10">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="text-2xl font-headline font-bold text-primary flex items-center gap-2">
+              <Sparkles className="text-secondary" /> Agentic Journey Insight
+            </SheetTitle>
+          </SheetHeader>
+          <TravelIntelligence data={intelligenceData} />
+        </SheetContent>
+      </Sheet>
+
+      <Navigation onCategoryClick={handleCategoryClick} isProcessing={isLoading} />
     </div>
   );
 }

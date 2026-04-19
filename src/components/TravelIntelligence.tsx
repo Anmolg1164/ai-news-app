@@ -1,9 +1,14 @@
 "use client";
 
-import { Plane, Globe, ShieldCheck, Map, TrendingUp, Info } from "lucide-react";
+import { Plane, Globe, ShieldCheck, Map, TrendingUp, Info, Sun, Coins, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
 
-const intelligence = [
+interface TravelIntelligenceProps {
+  data?: JourneyIntelligenceOutput | null;
+}
+
+const DEFAULT_INTELLIGENCE = [
   {
     category: "Visa Updates",
     title: "Schengen Area changes for 2025",
@@ -17,17 +22,50 @@ const intelligence = [
     icon: ShieldCheck,
     status: "Updated",
     color: "bg-green-100 text-green-700"
-  },
-  {
-    category: "Insights",
-    title: "Rising spiritual retreats in Himalayas",
-    icon: TrendingUp,
-    status: "Trending",
-    color: "bg-purple-100 text-purple-700"
   }
 ];
 
-export function TravelIntelligence() {
+export function TravelIntelligence({ data }: TravelIntelligenceProps) {
+  if (data) {
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-headline font-bold text-primary flex items-center gap-2">
+            <Map className="text-secondary" /> {data.country || "Global"} Insights
+          </h2>
+        </div>
+
+        <div className="p-5 rounded-2xl glass border-primary/10 space-y-4">
+          <p className="text-primary font-medium leading-relaxed">
+            {data.summary}
+          </p>
+          
+          <div className="grid grid-cols-2 gap-3">
+            {data.weather && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-100 flex items-center gap-2">
+                <Sun size={18} className="text-amber-600" />
+                <span className="text-sm font-bold text-amber-900">{data.weather}</span>
+              </div>
+            )}
+            {data.currency && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-2">
+                <Coins size={18} className="text-emerald-600" />
+                <span className="text-sm font-bold text-emerald-900">{data.currency}</span>
+              </div>
+            )}
+          </div>
+
+          {data.travelAlert && (
+            <div className="p-4 rounded-xl bg-red-50 border border-red-100 flex items-start gap-3">
+              <AlertTriangle size={18} className="text-red-600 mt-0.5" />
+              <p className="text-xs text-red-900 font-medium">{data.travelAlert}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -37,7 +75,7 @@ export function TravelIntelligence() {
       </div>
       
       <div className="grid gap-4">
-        {intelligence.map((item, idx) => {
+        {DEFAULT_INTELLIGENCE.map((item, idx) => {
           const Icon = item.icon;
           return (
             <div 
@@ -72,7 +110,7 @@ export function TravelIntelligence() {
           <Info size={16} /> Quick Note
         </div>
         <p className="text-xs opacity-90 leading-relaxed">
-          Your travel patterns suggest a growing interest in coastal meditation retreats. Check out our latest guides for Kerala and Bali.
+          Select a navigation category to get real-time agentic insights for your next destination.
         </p>
       </div>
     </div>
