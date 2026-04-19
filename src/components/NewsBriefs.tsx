@@ -3,11 +3,12 @@
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe, Languages } from "lucide-react";
+import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe, Languages, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAlternativePerspective, type AlternativePerspectiveOutput } from "@/ai/flows/get-alternative-perspective";
 import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
 import { searchNews as searchNewsTool } from "@/ai/flows/get-journey-intelligence";
+import { useToast } from "@/hooks/use-toast";
 
 interface NewsBrief {
   id: string;
@@ -22,52 +23,60 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
   const [showAlt, setShowAlt] = useState(false);
   const [altData, setAltData] = useState<AlternativePerspectiveOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
   
   const [translatedData, setTranslatedData] = useState<TranslateNewsOutput | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   
   const translationCache = useRef<Record<string, TranslateNewsOutput>>({});
+  const { toast } = useToast();
+
+  const handleTranslation = async (targetLang: string) => {
+    if (targetLang === "English") {
+      setTranslatedData(null);
+      setHasError(false);
+      return;
+    }
+
+    const cacheKey = `${brief.id}-${targetLang}`;
+    if (translationCache.current[cacheKey]) {
+      setTranslatedData(translationCache.current[cacheKey]);
+      setHasError(false);
+      return;
+    }
+
+    setIsTranslating(true);
+    setHasError(false);
+    
+    // Significantly staggered requests to respect free tier RPM (15-20 RPM)
+    await new Promise(resolve => setTimeout(resolve, index * 1500));
+
+    try {
+      const result = await translateNews({
+        title: brief.title,
+        content: brief.content,
+        targetLanguage: targetLang
+      });
+      translationCache.current[cacheKey] = result;
+      setTranslatedData(result);
+    } catch (error: any) {
+      console.error("Translation failed:", error);
+      setHasError(true);
+      if (index === 0) { // Only toast once for the first card to avoid toast flood
+        toast({
+          variant: "destructive",
+          title: "Translation Service Busy",
+          description: "The AI agent is handling many requests. Retrying in background...",
+        });
+      }
+    } finally {
+      setIsTranslating(false);
+    }
+  };
 
   useEffect(() => {
-    let isMounted = true;
-    const handleTranslation = async () => {
-      if (language === "English") {
-        setTranslatedData(null);
-        return;
-      }
-
-      const cacheKey = `${brief.id}-${language}`;
-      if (translationCache.current[cacheKey]) {
-        setTranslatedData(translationCache.current[cacheKey]);
-        return;
-      }
-
-      setIsTranslating(true);
-      
-      // Staggered requests to prevent overwhelming the free tier
-      await new Promise(resolve => setTimeout(resolve, index * 600));
-
-      try {
-        if (!isMounted) return;
-        const result = await translateNews({
-          title: brief.title,
-          content: brief.content,
-          targetLanguage: language
-        });
-        if (isMounted) {
-          translationCache.current[cacheKey] = result;
-          setTranslatedData(result);
-        }
-      } catch (error) {
-        console.error("Translation failed:", error);
-      } finally {
-        if (isMounted) setIsTranslating(false);
-      }
-    };
-
-    handleTranslation();
-    return () => { isMounted = false; };
-  }, [language, brief, index]);
+    handleTranslation(language);
+  }, [language, brief.id]);
 
   const handleToggle = async () => {
     if (!showAlt && !altData) {
@@ -80,7 +89,11 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
         });
         setAltData(result);
       } catch (error) {
-        console.error("Alternative perspective failed:", error);
+        toast({
+          variant: "destructive",
+          title: "Perspective Switch Busy",
+          description: "The AI is at its limit. Please try again in 1 minute.",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -103,6 +116,16 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
               <span className="flex items-center gap-1 text-[8px] font-bold text-primary/40 uppercase animate-pulse">
                 <Languages size={10} /> {language}...
               </span>
+            )}
+            {hasError && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => handleTranslation(language)}
+                className="h-5 px-1 text-[8px] text-destructive hover:text-destructive flex items-center gap-1"
+              >
+                <RefreshCw size={8} /> Retry
+              </Button>
             )}
           </div>
           <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium">
@@ -193,6 +216,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextPage, setNextPage] = useState<string | null>(null);
   const observer = useRef<IntersectionObserver | null>(null);
+  const { toast } = useToast();
 
   const fetchLiveNews = useCallback(async (isInitial = true) => {
     if (isInitial) setLoading(true);
@@ -200,7 +224,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
 
     try {
       const query = searchQuery 
-        ? `${searchQuery} news` 
+        ? `${searchQuery}` 
         : `${category} news in ${country}`;
         
       const rawResults = await searchNewsTool({ 
@@ -212,11 +236,11 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       if (parsed.error) throw new Error(parsed.error);
 
       const newBriefs = (parsed.results || []).map((r: any, idx: number) => ({
-        id: `news-${isInitial ? '' : briefs.length}-${idx}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `news-${isInitial ? 'init' : 'more'}-${idx}-${Date.now()}`,
         title: r.title || "Headline",
         content: r.description || "Latest update available.",
         url: r.link,
-        category: searchQuery ? "Search Result" : category,
+        category: searchQuery ? "Search" : category,
         publishedAt: r.pubDate ? new Date(r.pubDate).toLocaleDateString() : new Date().toLocaleDateString()
       }));
 
@@ -228,11 +252,16 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       setNextPage(parsed.nextPage);
     } catch (error) {
       console.error("Live news fetch failed:", error);
+      toast({
+        variant: "destructive",
+        title: "News Service Busy",
+        description: "Could not fetch latest updates. Please try again shortly.",
+      });
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [category, country, searchQuery, nextPage, briefs.length]);
+  }, [category, country, searchQuery, nextPage, toast]);
 
   useEffect(() => {
     fetchLiveNews(true);
@@ -253,7 +282,6 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
 
   return (
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-8 duration-700">
-      {/* Fixed Header within the column */}
       <div className="flex items-center justify-between gap-3 px-2 py-4 flex-shrink-0 bg-background/80 backdrop-blur-sm z-10">
         <div className="flex items-center gap-2">
           <Globe className="text-primary/40" size={24} />
@@ -278,7 +306,6 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         </div>
       </div>
       
-      {/* Independently scrollable area */}
       <div 
         ref={ref}
         onScroll={onScroll}
@@ -286,7 +313,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       >
         {loading ? (
           <div className="space-y-6">
-            {[1, 2, 3, 4].map(i => (
+            {[1, 2, 3].map(i => (
               <Skeleton key={i} className="h-48 w-full rounded-2xl glass" />
             ))}
           </div>
@@ -312,16 +339,6 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
           </div>
         )}
       </div>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { 
-          background: hsla(var(--primary), 0.1); 
-          border-radius: 10px; 
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsla(var(--primary), 0.2); }
-      `}</style>
     </div>
   );
 });

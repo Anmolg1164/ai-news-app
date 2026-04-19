@@ -43,7 +43,7 @@ const translateNewsFlow = ai.defineFlow(
   },
   async (input) => {
     let retries = 0;
-    const maxRetries = 5; // Increased retries for better resilience
+    const maxRetries = 6;
     
     while (retries < maxRetries) {
       try {
@@ -51,11 +51,16 @@ const translateNewsFlow = ai.defineFlow(
         if (!output) throw new Error('Empty translation response');
         return output;
       } catch (error: any) {
-        const isRateLimit = error.message?.includes('429') || error.status === 429 || error.message?.includes('RESOURCE_EXHAUSTED');
+        const isRateLimit = 
+          error.message?.includes('429') || 
+          error.status === 429 || 
+          error.message?.includes('RESOURCE_EXHAUSTED') ||
+          error.message?.includes('Quota exceeded');
+
         if (isRateLimit && retries < maxRetries - 1) {
           retries++;
-          // Aggressive exponential backoff: 3s, 6s, 12s, 24s, 48s
-          const delay = Math.pow(2, retries) * 1500 + Math.random() * 1000;
+          // Aggressive exponential backoff: 5s, 10s, 20s, 40s...
+          const delay = Math.pow(2, retries) * 2500 + Math.random() * 1000;
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
