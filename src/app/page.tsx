@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Navigation } from "@/components/Navigation";
 import { TravelIntelligence } from "@/components/TravelIntelligence";
 import { GitaWisdom } from "@/components/GitaWisdom";
@@ -36,34 +36,35 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
+  
+  const newsScrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setIsMounted(true);
     // Request microphone access immediately on load
     const requestMic = async () => {
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log("Microphone access granted.");
       } catch (err) {
         console.error("Microphone access denied:", err);
-        toast({
-          variant: "destructive",
-          title: "Microphone Access Required",
-          description: "Please enable your microphone for the interactive voice briefing.",
-        });
       }
     };
     requestMic();
+  }, []);
 
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 400);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [toast]);
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollTop = e.currentTarget.scrollTop;
+    setShowScrollTop(scrollTop > 400);
+  };
 
   const handleCategoryClick = (category: string) => {
     setActiveCategory(category);
+    // Scroll back to top of news when category changes
+    if (newsScrollContainerRef.current) {
+      newsScrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const triggerIntelligence = async () => {
@@ -76,7 +77,6 @@ export default function Home() {
       });
       setIntelligenceData(result);
     } catch (error) {
-      console.error("Agentic intelligence failure:", error);
       toast({
         variant: "destructive",
         title: "AI Analysis Busy",
@@ -88,7 +88,9 @@ export default function Home() {
   };
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (newsScrollContainerRef.current) {
+      newsScrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleIconClick = (feature: string) => {
@@ -98,9 +100,11 @@ export default function Home() {
     });
   };
 
+  if (!isMounted) return null;
+
   return (
-    <div className="min-h-screen pb-32 bg-background/50">
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-primary/5">
+    <div className="h-screen flex flex-col bg-background/50 overflow-hidden" suppressHydrationWarning>
+      <header className="z-40 bg-background/80 backdrop-blur-md border-b border-primary/5 flex-shrink-0">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg">
@@ -118,6 +122,7 @@ export default function Home() {
                 type="text" 
                 placeholder="Explore headlines..." 
                 className="w-full bg-white/50 border border-primary/10 rounded-full py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all"
+                suppressHydrationWarning
               />
             </div>
             
@@ -146,6 +151,7 @@ export default function Home() {
             <button 
               onClick={() => handleIconClick("Notifications")}
               className="p-2 rounded-full hover:bg-white/50 text-primary transition-colors relative"
+              suppressHydrationWarning
             >
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-secondary rounded-full border-2 border-background" />
@@ -167,9 +173,10 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <aside className="lg:col-span-4 space-y-8">
+      <main className="flex-1 overflow-hidden container mx-auto px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full py-8">
+          {/* Sidebar - Gita Wisdom stays in place if there's enough height, or scrolls within itself */}
+          <aside className="lg:col-span-4 space-y-8 overflow-y-auto pr-2 custom-scrollbar hidden lg:block">
             <section className="animate-in fade-in slide-in-from-left-4 duration-500">
               <GitaWisdom isListening={isUserSpeaking} />
             </section>
@@ -182,7 +189,7 @@ export default function Home() {
                 Stay updated on your local surroundings in {activeCountry.name}. Your news feed is currently optimized for this region.
               </p>
               <button 
-                onClick={() => handleIconClick("Itinerary")}
+                onClick={() => handleIconClick("Preferences")}
                 className="w-full py-2 rounded-xl bg-secondary text-primary font-bold hover:scale-105 transition-transform"
               >
                 Set Preferences
@@ -190,7 +197,12 @@ export default function Home() {
             </div>
           </aside>
 
-          <section className="lg:col-span-8 space-y-8">
+          {/* Main Content - Only news cards scroll */}
+          <section 
+            ref={newsScrollContainerRef}
+            onScroll={handleScroll}
+            className="lg:col-span-8 overflow-y-auto custom-scrollbar pb-32"
+          >
             <NewsBriefs 
               category={activeCategory} 
               country={activeCountry.name} 
@@ -227,6 +239,22 @@ export default function Home() {
       >
         <ArrowUp size={24} />
       </button>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(var(--primary), 0.1);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(var(--primary), 0.2);
+        }
+      `}</style>
     </div>
   );
 }
