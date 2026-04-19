@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -44,8 +45,7 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
 
       setIsTranslating(true);
       
-      // STAGGERED REQUESTS: Delay each card's translation based on its index
-      // to avoid hitting the 20 RPM limit simultaneously.
+      // STAGGERED REQUESTS: Delay each card's translation to avoid 429
       await new Promise(resolve => setTimeout(resolve, index * 800));
 
       try {
@@ -102,7 +102,7 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
             </span>
             {isTranslating && (
               <span className="flex items-center gap-1 text-[8px] font-bold text-primary/40 uppercase animate-pulse">
-                <Languages size={10} /> Queued for {language}...
+                <Languages size={10} /> {language}...
               </span>
             )}
           </div>
@@ -157,7 +157,7 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
           <ArrowLeftRight size={14} />
           {showAlt ? "Original Feed" : "Perspective Switch"}
         </Button>
-        {brief.url && ( brief.url.startsWith('http') ) && (
+        {brief.url && brief.url.startsWith('http') && (
           <a 
             href={brief.url} 
             target="_blank" 
@@ -174,12 +174,13 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
 
 interface NewsBriefsProps {
   category: string;
+  searchQuery?: string;
   country: string;
   language: string;
   onIntelligenceClick?: () => void;
 }
 
-export function NewsBriefs({ category, country, language, onIntelligenceClick }: NewsBriefsProps) {
+export function NewsBriefs({ category, searchQuery, country, language, onIntelligenceClick }: NewsBriefsProps) {
   const [briefs, setBriefs] = useState<NewsBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -191,7 +192,10 @@ export function NewsBriefs({ category, country, language, onIntelligenceClick }:
     else setLoadingMore(true);
 
     try {
-      const query = `${category} news in ${country}`;
+      const query = searchQuery 
+        ? `${searchQuery} news` 
+        : `${category} news in ${country}`;
+        
       const rawResults = await searchNewsTool({ 
         query, 
         page: isInitial ? undefined : nextPage || undefined 
@@ -205,7 +209,7 @@ export function NewsBriefs({ category, country, language, onIntelligenceClick }:
         title: r.title || "Headline",
         content: r.description || "Latest update available.",
         url: r.link,
-        category: category,
+        category: searchQuery ? "Search Result" : category,
         publishedAt: r.pubDate ? new Date(r.pubDate).toLocaleDateString() : new Date().toLocaleDateString()
       }));
 
@@ -221,11 +225,11 @@ export function NewsBriefs({ category, country, language, onIntelligenceClick }:
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [category, country, nextPage, briefs.length]);
+  }, [category, country, searchQuery, nextPage, briefs.length]);
 
   useEffect(() => {
     fetchLiveNews(true);
-  }, [category, country]);
+  }, [category, country, searchQuery]);
 
   const lastElementRef = useCallback((node: HTMLDivElement) => {
     if (loading || loadingMore) return;
@@ -256,7 +260,7 @@ export function NewsBriefs({ category, country, language, onIntelligenceClick }:
         <div className="flex items-center gap-2">
           <Globe className="text-primary/40" size={24} />
           <h2 className="text-3xl font-headline font-bold text-primary tracking-tighter">
-            {category} Briefings
+            {searchQuery ? `Results for "${searchQuery}"` : `${category} Briefings`}
           </h2>
         </div>
         

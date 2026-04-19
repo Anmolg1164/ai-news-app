@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -41,6 +42,8 @@ const LANGUAGES = [
 export default function Home() {
   const [intelligenceData, setIntelligenceData] = useState<JourneyIntelligenceOutput | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("World");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchInput, setSearchInput] = useState<string>("");
   const [activeCountry, setActiveCountry] = useState(COUNTRIES[0]);
   const [activeLanguage, setActiveLanguage] = useState(LANGUAGES[0]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -71,8 +74,19 @@ export default function Home() {
 
   const handleCategoryClick = (category: string) => {
     setActiveCategory(category);
+    setSearchQuery(""); // Clear search when switching categories
+    setSearchInput("");
     if (newsScrollContainerRef.current) {
       newsScrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      setSearchQuery(searchInput);
+      if (newsScrollContainerRef.current) {
+        newsScrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
   };
 
@@ -81,8 +95,9 @@ export default function Home() {
     setIsLoading(true);
     setIntelligenceData(null);
     try {
+      const context = searchQuery ? `Search query: ${searchQuery}` : `Category: ${activeCategory}`;
       const result = await getJourneyIntelligence({ 
-        category: `${activeCategory} in ${activeCountry.name}` 
+        category: `${context} in ${activeCountry.name}` 
       });
       setIntelligenceData(result);
     } catch (error) {
@@ -113,7 +128,7 @@ export default function Home() {
 
   return (
     <div className="h-screen flex flex-col bg-background/50 overflow-hidden" suppressHydrationWarning>
-      <header className="z-40 bg-background/80 backdrop-blur-md border-b border-primary/5 flex-shrink-0">
+      <header className="z-40 bg-background/80 backdrop-blur-md border-b border-primary/5 flex-shrink-0" suppressHydrationWarning>
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg">
@@ -129,7 +144,10 @@ export default function Home() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
               <input 
                 type="text" 
-                placeholder="Explore headlines..." 
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Search headlines (Press Enter)..." 
                 className="w-full bg-white/50 border border-primary/10 rounded-full py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all"
                 suppressHydrationWarning
               />
@@ -232,10 +250,11 @@ export default function Home() {
           <section 
             ref={newsScrollContainerRef}
             onScroll={handleScroll}
-            className="lg:col-span-8 overflow-y-auto custom-scrollbar pb-32"
+            className="lg:col-span-8 overflow-y-auto custom-scrollbar pb-32 h-full"
           >
             <NewsBriefs 
               category={activeCategory} 
+              searchQuery={searchQuery}
               country={activeCountry.name} 
               language={activeLanguage.name}
               onIntelligenceClick={triggerIntelligence}
@@ -253,7 +272,7 @@ export default function Home() {
           </SheetHeader>
           <TravelIntelligence 
             data={intelligenceData} 
-            category={activeCategory} 
+            category={searchQuery ? `Search for ${searchQuery}` : activeCategory} 
             isLoading={isLoading}
             onUserSpeakingChange={setIsUserSpeaking}
           />
