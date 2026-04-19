@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -37,7 +36,11 @@ const LANGUAGES = [
   { value: "Sanskrit", label: "Sanskrit (Romanized)" }
 ];
 
-export function GitaWisdom() {
+interface GitaWisdomProps {
+  isListening?: boolean;
+}
+
+export function GitaWisdom({ isListening }: GitaWisdomProps) {
   const [verseIndex, setVerseIndex] = useState(0);
   const [interpretation, setInterpretation] = useState<InterpretGitaVerseOutput | null>(null);
   const [translation, setTranslation] = useState<TranslateVerseOutput | null>(null);
@@ -46,7 +49,6 @@ export function GitaWisdom() {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   
-  // Cache to prevent re-fetching the same translation and exhausting quota
   const translationCache = useRef<Record<string, TranslateVerseOutput>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
@@ -146,7 +148,8 @@ export function GitaWisdom() {
   return (
     <Card className={cn(
       "parchment overflow-hidden border-none transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
-      "relative group"
+      "relative group",
+      isListening && "ring-4 ring-secondary animate-pulse shadow-[0_0_20px_rgba(180,148,94,0.6)]"
     )}>
       <audio ref={audioRef} onEnded={() => setIsPlaying(false)} className="hidden" />
       

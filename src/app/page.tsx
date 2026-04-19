@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -36,20 +35,35 @@ export default function Home() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    // Request microphone access immediately on load
+    const requestMic = async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log("Microphone access granted.");
+      } catch (err) {
+        console.error("Microphone access denied:", err);
+        toast({
+          variant: "destructive",
+          title: "Microphone Access Required",
+          description: "Please enable your microphone for the interactive voice briefing.",
+        });
+      }
+    };
+    requestMic();
+
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [toast]);
 
   const handleCategoryClick = (category: string) => {
     setActiveCategory(category);
-    // Removed automatic sheet opening and intelligence fetch from here
-    // as per user request to just render news.
   };
 
   const triggerIntelligence = async () => {
@@ -157,7 +171,7 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <aside className="lg:col-span-4 space-y-8">
             <section className="animate-in fade-in slide-in-from-left-4 duration-500">
-              <GitaWisdom />
+              <GitaWisdom isListening={isUserSpeaking} />
             </section>
             
             <div className="p-6 rounded-3xl glass-dark text-white space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -196,7 +210,8 @@ export default function Home() {
           <TravelIntelligence 
             data={intelligenceData} 
             category={activeCategory} 
-            isLoading={isLoading} 
+            isLoading={isLoading}
+            onUserSpeakingChange={setIsUserSpeaking}
           />
         </SheetContent>
       </Sheet>

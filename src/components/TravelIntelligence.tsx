@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -31,6 +30,7 @@ interface TravelIntelligenceProps {
   data?: JourneyIntelligenceOutput | null;
   category?: string;
   isLoading?: boolean;
+  onUserSpeakingChange?: (isSpeaking: boolean) => void;
 }
 
 const DEFAULT_INTELLIGENCE = [
@@ -50,7 +50,7 @@ const DEFAULT_INTELLIGENCE = [
   }
 ];
 
-export function TravelIntelligence({ data, category, isLoading }: TravelIntelligenceProps) {
+export function TravelIntelligence({ data, category, isLoading, onUserSpeakingChange }: TravelIntelligenceProps) {
   const [altPerspective, setAltPerspective] = useState<AlternativePerspectiveOutput | null>(null);
   const [isLoadingAlt, setIsLoadingAlt] = useState(false);
   const [showAlt, setShowAlt] = useState(false);
@@ -62,13 +62,16 @@ export function TravelIntelligence({ data, category, isLoading }: TravelIntellig
 
   const { startVAD, isSpeaking } = useVAD({
     onSpeechStart: () => {
-      if (audioRef.current && isAiTalking) {
+      // INTERRUPT: Stop AI immediately when user starts speaking
+      if (audioRef.current && !audioRef.current.paused) {
         audioRef.current.pause();
         setIsAiTalking(false);
         setStatusMessage("Listening to you...");
       }
+      onUserSpeakingChange?.(true);
     },
     onSpeechEnd: async (blob) => {
+      onUserSpeakingChange?.(false);
       if (!data || !isInteractiveMode) return;
       setStatusMessage("Processing your question...");
       
@@ -100,7 +103,7 @@ export function TravelIntelligence({ data, category, isLoading }: TravelIntellig
     if (!data) return;
     setIsInteractiveMode(true);
     setStatusMessage("Preparing briefing...");
-    startVAD();
+    startVAD(); // Start listening for interruptions
 
     try {
       const textToRead = showAlt && altPerspective ? altPerspective.altSummary : data.summary;
@@ -235,7 +238,7 @@ export function TravelIntelligence({ data, category, isLoading }: TravelIntellig
               </Button>
             ) : (
               <div className="flex flex-col items-center gap-2">
-                <div className={`p-4 rounded-full ${isSpeaking ? 'bg-secondary animate-pulse' : isAiTalking ? 'bg-primary animate-bounce' : 'bg-muted'} transition-colors`}>
+                <div className={`p-4 rounded-full ${isSpeaking ? 'bg-secondary animate-pulse ring-4 ring-secondary/50' : isAiTalking ? 'bg-primary animate-bounce' : 'bg-muted'} transition-colors`}>
                   {isSpeaking ? <Mic className="text-primary-foreground" size={24} /> : <Volume2 className="text-primary-foreground" size={24} />}
                 </div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60">{statusMessage}</span>

@@ -31,9 +31,10 @@ const voiceChatFlow = ai.defineFlow(
     outputSchema: VoiceChatOutputSchema,
   },
   async (input) => {
-    // 1. Transcribe and Generate Answer
+    // 1. Transcribe and Generate Answer with specific user prompt
     const response = await ai.generate({
       system: `You are the Dharma Navigator Guide. Use the provided News Context to answer the user's question. 
+      The user is asking a question about the news they just heard. Answer briefly.
       Keep answers concise (1-2 sentences). 
       Always end your answer by asking: "Should I continue with the briefing?"`,
       prompt: [
