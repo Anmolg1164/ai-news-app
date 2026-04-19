@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -6,7 +5,7 @@ import { Navigation } from "@/components/Navigation";
 import { TravelIntelligence } from "@/components/TravelIntelligence";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
-import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp, Languages } from "lucide-react";
+import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp, Languages, User } from "lucide-react";
 import Image from "next/image";
 import { getJourneyIntelligence, type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -74,7 +73,7 @@ export default function Home() {
 
   const handleCategoryClick = (category: string) => {
     setActiveCategory(category);
-    setSearchQuery(""); // Clear search when switching categories
+    setSearchQuery("");
     setSearchInput("");
     if (newsScrollContainerRef.current) {
       newsScrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
@@ -117,57 +116,55 @@ export default function Home() {
     }
   };
 
-  const handleIconClick = (feature: string) => {
-    toast({
-      title: `${feature} Coming Soon`,
-      description: "We're currently perfecting your personal news dashboard.",
-    });
-  };
-
   if (!isMounted) return null;
 
   return (
-    <div className="h-screen flex flex-col bg-background/50 overflow-hidden" suppressHydrationWarning>
-      <header className="z-40 bg-background/80 backdrop-blur-md border-b border-primary/5 flex-shrink-0" suppressHydrationWarning>
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg">
+    <div className="h-screen flex flex-col bg-background overflow-hidden" suppressHydrationWarning>
+      <header className="z-40 glass border-b border-primary/5 flex-shrink-0 animate-in fade-in slide-in-from-top-4 duration-700" suppressHydrationWarning>
+        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform cursor-pointer">
               GM
             </div>
-            <h1 className="text-2xl font-headline font-bold text-primary tracking-tighter">
-              G newsMola
-            </h1>
+            <div>
+              <h1 className="text-2xl font-headline font-bold text-primary tracking-tighter leading-none">
+                G newsMola
+              </h1>
+              <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-muted-foreground opacity-60">
+                Agentic Briefings
+              </span>
+            </div>
           </div>
           
-          <div className="hidden md:flex flex-1 max-w-xl mx-8 gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+          <div className="hidden md:flex flex-1 max-w-2xl mx-12 gap-4">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
               <input 
                 type="text" 
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                placeholder="Search headlines (Press Enter)..." 
-                className="w-full bg-white/50 border border-primary/10 rounded-full py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all"
+                placeholder="Search world events..." 
+                className="w-full bg-white/40 border border-primary/10 rounded-2xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all shadow-sm"
                 suppressHydrationWarning
               />
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="rounded-full border-primary/10 bg-white/50 gap-2 h-10 px-4">
-                    <MapPin size={14} className="text-secondary" />
-                    <span className="text-xs font-bold uppercase">{activeCountry.name}</span>
-                    <ChevronDown size={14} />
+                  <Button variant="outline" className="rounded-2xl border-primary/10 bg-white/40 gap-2 h-12 px-4 hover:bg-white shadow-sm transition-all">
+                    <MapPin size={16} className="text-accent" />
+                    <span className="text-xs font-bold uppercase tracking-wider">{activeCountry.name}</span>
+                    <ChevronDown size={14} className="opacity-40" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="glass">
+                <DropdownMenuContent className="glass min-w-[160px]">
                   {COUNTRIES.map((c) => (
                     <DropdownMenuItem 
                       key={c.code} 
                       onClick={() => setActiveCountry(c)}
-                      className="cursor-pointer"
+                      className="cursor-pointer font-medium py-2 px-4 rounded-lg m-1"
                     >
                       {c.name}
                     </DropdownMenuItem>
@@ -177,18 +174,18 @@ export default function Home() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="rounded-full border-primary/10 bg-white/50 gap-2 h-10 px-4">
-                    <Languages size={14} className="text-secondary" />
-                    <span className="text-xs font-bold uppercase">{activeLanguage.name}</span>
-                    <ChevronDown size={14} />
+                  <Button variant="outline" className="rounded-2xl border-primary/10 bg-white/40 gap-2 h-12 px-4 hover:bg-white shadow-sm transition-all">
+                    <Languages size={16} className="text-accent" />
+                    <span className="text-xs font-bold uppercase tracking-wider">{activeLanguage.name}</span>
+                    <ChevronDown size={14} className="opacity-40" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="glass">
+                <DropdownMenuContent className="glass min-w-[160px]">
                   {LANGUAGES.map((l) => (
                     <DropdownMenuItem 
                       key={l.code} 
                       onClick={() => setActiveLanguage(l)}
-                      className="cursor-pointer"
+                      className="cursor-pointer font-medium py-2 px-4 rounded-lg m-1"
                     >
                       {l.name}
                     </DropdownMenuItem>
@@ -198,24 +195,17 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => handleIconClick("Notifications")}
-              className="p-2 rounded-full hover:bg-white/50 text-primary transition-colors relative"
-              suppressHydrationWarning
-            >
-              <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-secondary rounded-full border-2 border-background" />
+          <div className="flex items-center gap-5">
+            <button className="relative group p-2 rounded-xl hover:bg-white transition-all">
+              <Bell size={22} className="text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-secondary rounded-full border-2 border-white animate-pulse" />
             </button>
-            <div 
-              onClick={() => handleIconClick("Profile")}
-              className="w-10 h-10 rounded-full overflow-hidden border-2 border-secondary shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
-            >
+            <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-white shadow-md cursor-pointer hover:ring-4 hover:ring-primary/5 transition-all">
               <Image 
                 src="https://picsum.photos/seed/user1/100/100" 
-                alt="User Avatar" 
-                width={40} 
-                height={40}
+                alt="Profile" 
+                width={44} 
+                height={44}
                 className="object-cover"
                 data-ai-hint="user avatar"
               />
@@ -224,25 +214,21 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-hidden container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full py-8">
-          <aside className="lg:col-span-4 space-y-8 overflow-y-auto pr-2 custom-scrollbar hidden lg:block">
-            <section className="animate-in fade-in slide-in-from-left-4 duration-500">
-              <GitaWisdom isListening={isUserSpeaking} />
-            </section>
+      <main className="flex-1 overflow-hidden container mx-auto px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 h-full py-10">
+          <aside className="lg:col-span-4 space-y-10 overflow-y-auto pr-4 custom-scrollbar hidden lg:block animate-in fade-in slide-in-from-left-8 duration-1000">
+            <GitaWisdom isListening={isUserSpeaking} />
             
-            <div className="p-6 rounded-3xl glass-dark text-white space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-              <div className="flex items-center gap-2 font-headline font-bold">
-                <MapPin className="text-secondary" /> Local Expedition
+            <div className="p-8 rounded-[2.5rem] glass-dark text-white space-y-6 relative overflow-hidden group">
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-secondary/20 rounded-full blur-3xl group-hover:bg-secondary/30 transition-all duration-700" />
+              <div className="flex items-center gap-3 font-headline font-bold text-xl">
+                <Sparkles className="text-secondary animate-pulse" /> Local Expedition
               </div>
-              <p className="text-sm opacity-80 leading-relaxed">
-                Stay updated on your local surroundings in {activeCountry.name}. Your news feed is currently optimized for this region and language ({activeLanguage.name}).
+              <p className="text-sm opacity-70 leading-relaxed font-medium">
+                Your news feed is currently optimized for <span className="text-secondary font-bold">{activeCountry.name}</span> in <span className="text-secondary font-bold">{activeLanguage.name}</span>.
               </p>
-              <button 
-                onClick={() => handleIconClick("Preferences")}
-                className="w-full py-2 rounded-xl bg-secondary text-primary font-bold hover:scale-105 transition-transform"
-              >
-                Set Preferences
+              <button className="w-full py-4 rounded-2xl bg-secondary text-slate-900 font-bold hover:glow-secondary transition-all hover:scale-[1.02]">
+                Refine Preferences
               </button>
             </div>
           </aside>
@@ -250,7 +236,7 @@ export default function Home() {
           <section 
             ref={newsScrollContainerRef}
             onScroll={handleScroll}
-            className="lg:col-span-8 overflow-y-auto custom-scrollbar pb-32 h-full"
+            className="lg:col-span-8 overflow-y-auto custom-scrollbar pb-40 h-full animate-in fade-in slide-in-from-bottom-8 duration-700"
           >
             <NewsBriefs 
               category={activeCategory} 
@@ -264,18 +250,20 @@ export default function Home() {
       </main>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent side="right" className="w-[400px] sm:w-[540px] glass border-l-primary/10 overflow-y-auto">
-          <SheetHeader className="mb-6">
-            <SheetTitle className="text-2xl font-headline font-bold text-primary flex items-center gap-2">
-              <Sparkles className="text-secondary" /> Agentic Intelligence
-            </SheetTitle>
-          </SheetHeader>
-          <TravelIntelligence 
-            data={intelligenceData} 
-            category={searchQuery ? `Search for ${searchQuery}` : activeCategory} 
-            isLoading={isLoading}
-            onUserSpeakingChange={setIsUserSpeaking}
-          />
+        <SheetContent side="right" className="w-[400px] sm:w-[540px] glass border-l-primary/10 overflow-y-auto p-0">
+          <div className="p-8">
+            <SheetHeader className="mb-8">
+              <SheetTitle className="text-3xl font-headline font-bold text-primary flex items-center gap-3">
+                <Sparkles className="text-secondary" /> Agentic Intelligence
+              </SheetTitle>
+            </SheetHeader>
+            <TravelIntelligence 
+              data={intelligenceData} 
+              category={searchQuery ? `Search for ${searchQuery}` : activeCategory} 
+              isLoading={isLoading}
+              onUserSpeakingChange={setIsUserSpeaking}
+            />
+          </div>
         </SheetContent>
       </Sheet>
 
@@ -284,27 +272,21 @@ export default function Home() {
       <button
         onClick={scrollToTop}
         className={cn(
-          "fixed bottom-24 right-8 p-4 rounded-full bg-primary text-white shadow-2xl transition-all duration-300 z-50 hover:scale-110",
-          showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
+          "fixed bottom-32 right-10 p-5 rounded-3xl bg-primary text-white shadow-2xl transition-all duration-500 z-50 hover:scale-110 active:scale-95 glow-primary",
+          showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20 pointer-events-none"
         )}
       >
-        <ArrowUp size={24} />
+        <ArrowUp size={28} />
       </button>
 
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { 
+          background: hsla(var(--primary), 0.1); 
+          border-radius: 10px; 
         }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(var(--primary), 0.1);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(var(--primary), 0.2);
-        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsla(var(--primary), 0.2); }
       `}</style>
     </div>
   );

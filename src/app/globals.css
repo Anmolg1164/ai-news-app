@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 207 24% 91%;
-    --foreground: 208 52% 15%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 208 52% 15%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 208 52% 15%;
-    --primary: 208 52% 36%;
-    --primary-foreground: 207 24% 98%;
-    --secondary: 180 56% 71%;
-    --secondary-foreground: 208 52% 15%;
-    --muted: 207 24% 85%;
-    --muted-foreground: 208 20% 40%;
-    --accent: 180 56% 71%;
-    --accent-foreground: 208 52% 15%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 187 100% 42%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 187 100% 42%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 207 24% 98%;
-    --border: 208 20% 80%;
-    --input: 208 20% 80%;
-    --ring: 208 52% 36%;
-    --radius: 1rem;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
+    --radius: 1.25rem;
   }
 }
 
@@ -32,7 +32,10 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body;
+    @apply bg-background text-foreground font-body antialiased;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(221, 83%, 53%, 0.05) 0, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(187, 100% 42%, 0.05) 0, transparent 50%);
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
@@ -40,29 +43,43 @@
 }
 
 .glass {
-  @apply bg-white/30 backdrop-blur-md border border-white/20 shadow-lg;
+  @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)];
 }
 
 .glass-dark {
-  @apply bg-black/10 backdrop-blur-md border border-white/10 shadow-lg;
+  @apply bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 shadow-2xl;
 }
 
 .parchment {
-  @apply bg-[#fdf6e3] border-[#e2d1a3] text-[#5c4b37] shadow-xl rounded-2xl;
-  background-image: radial-gradient(#eee1c5 1px, transparent 0);
-  background-size: 24px 24px;
+  @apply bg-[#fdfaf3] border-[#e8dfc4] text-[#4a3f35] shadow-xl rounded-[2rem];
+  background-image: radial-gradient(#f1e6cc 1px, transparent 0);
+  background-size: 32px 32px;
   position: relative;
+  overflow: hidden;
 }
 
-.parchment::before {
+.parchment::after {
   content: '';
   position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 100%);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(45deg, rgba(255,255,255,0.2) 0%, transparent 100%);
   pointer-events: none;
-  border-radius: inherit;
 }
 
-.pill-nav {
-  @apply fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 rounded-full glass z-50;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-primary/10 rounded-full hover:bg-primary/20 transition-colors;
+}
+
+.glow-primary {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+.glow-secondary {
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
 }
