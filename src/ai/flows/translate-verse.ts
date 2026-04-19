@@ -43,7 +43,24 @@ const translateVerseFlow = ai.defineFlow(
     outputSchema: TranslateVerseOutputSchema,
   },
   async (input) => {
-    const { output } = await translateVersePrompt(input);
-    return output!;
+    let retries = 0;
+    const maxRetries = 3;
+    
+    while (retries < maxRetries) {
+      try {
+        const { output } = await translateVersePrompt(input);
+        return output!;
+      } catch (error: any) {
+        const isRateLimit = error.message?.includes('429') || error.status === 429;
+        if (isRateLimit && retries < maxRetries - 1) {
+          retries++;
+          // Exponential backoff: 2s, 4s, 8s...
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 1000));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new Error('Maximum retries exceeded for translation.');
   }
 );

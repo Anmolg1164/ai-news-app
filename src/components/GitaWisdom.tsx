@@ -18,6 +18,7 @@ import { textToSpeech } from "@/ai/flows/tts-flow";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import gitaData from "@/app/lib/gita-verses.json";
+import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -44,12 +45,12 @@ export function GitaWisdom() {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { toast } = useToast();
 
   const verses = gitaData.verses;
   const currentVerse = verses[verseIndex];
 
   useEffect(() => {
-    // Select a "daily" verse based on the date
     const today = new Date();
     const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
     setVerseIndex(dayOfYear % verses.length);
@@ -61,7 +62,11 @@ export function GitaWisdom() {
       const result = await interpretGitaVerse({ verse: currentVerse.sanskrit });
       setInterpretation(result);
     } catch (error) {
-      console.error("Failed to interpret verse", error);
+      toast({
+        variant: "destructive",
+        title: "Wisdom Service Busy",
+        description: "The AI is currently processing many requests. Please wait a moment and try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -82,7 +87,12 @@ export function GitaWisdom() {
       });
       setTranslation(result);
     } catch (error) {
-      console.error("Translation failed", error);
+      toast({
+        variant: "destructive",
+        title: "Translation Error",
+        description: "We couldn't translate the verse right now. The service might be over capacity.",
+      });
+      setSelectedLanguage("English");
     } finally {
       setIsTranslating(false);
     }
@@ -98,7 +108,11 @@ export function GitaWisdom() {
         audioRef.current.play();
       }
     } catch (error) {
-      console.error("TTS failed", error);
+      toast({
+        variant: "destructive",
+        title: "Audio Error",
+        description: "Voice synthesis is temporarily unavailable.",
+      });
     } finally {
       setIsPlaying(false);
     }

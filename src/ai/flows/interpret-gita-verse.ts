@@ -1,10 +1,6 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for interpreting Bhagavad Gita verses.
- *
- * - interpretGitaVerse - A function that handles the interpretation of a Gita verse.
- * - InterpretGitaVerseInput - The input type for the interpretGitaVerse function.
- * - InterpretGitaVerseOutput - The return type for the interpretGitaVerse function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -45,8 +41,24 @@ const interpretGitaVerseFlow = ai.defineFlow(
     inputSchema: InterpretGitaVerseInputSchema,
     outputSchema: InterpretGitaVerseOutputSchema,
   },
-  async input => {
-    const {output} = await interpretGitaVersePrompt(input);
-    return output!;
+  async (input) => {
+    let retries = 0;
+    const maxRetries = 3;
+    
+    while (retries < maxRetries) {
+      try {
+        const { output } = await interpretGitaVersePrompt(input);
+        return output!;
+      } catch (error: any) {
+        const isRateLimit = error.message?.includes('429') || error.status === 429;
+        if (isRateLimit && retries < maxRetries - 1) {
+          retries++;
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 1000));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new Error('Maximum retries exceeded for interpretation.');
   }
 );
