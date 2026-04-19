@@ -44,7 +44,7 @@ const translateVerseFlow = ai.defineFlow(
   },
   async (input) => {
     let retries = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
     
     while (retries < maxRetries) {
       try {
@@ -52,16 +52,17 @@ const translateVerseFlow = ai.defineFlow(
         if (!output) throw new Error('Empty response from AI');
         return output;
       } catch (error: any) {
-        const isRateLimit = error.message?.includes('429') || error.status === 429;
+        const isRateLimit = error.message?.includes('429') || error.status === 429 || error.message?.includes('RESOURCE_EXHAUSTED');
         if (isRateLimit && retries < maxRetries - 1) {
           retries++;
-          // Exponential backoff: 2s, 4s, 8s
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 1000));
+          // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+          const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
         throw error;
       }
     }
-    throw new Error('Maximum retries exceeded for translation.');
+    throw new Error('Gita verse translation failed after multiple retries due to rate limits.');
   }
 );

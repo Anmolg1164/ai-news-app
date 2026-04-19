@@ -43,7 +43,7 @@ const translateNewsFlow = ai.defineFlow(
   },
   async (input) => {
     let retries = 0;
-    const maxRetries = 2;
+    const maxRetries = 5; // Increased retries for better resilience
     
     while (retries < maxRetries) {
       try {
@@ -51,15 +51,17 @@ const translateNewsFlow = ai.defineFlow(
         if (!output) throw new Error('Empty translation response');
         return output;
       } catch (error: any) {
-        const isRateLimit = error.message?.includes('429') || error.status === 429;
+        const isRateLimit = error.message?.includes('429') || error.status === 429 || error.message?.includes('RESOURCE_EXHAUSTED');
         if (isRateLimit && retries < maxRetries - 1) {
           retries++;
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 1000));
+          // Aggressive exponential backoff: 3s, 6s, 12s, 24s, 48s
+          const delay = Math.pow(2, retries) * 1500 + Math.random() * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
         throw error;
       }
     }
-    throw new Error('News translation failed after retries.');
+    throw new Error('News translation failed after multiple retries due to rate limits.');
   }
 );

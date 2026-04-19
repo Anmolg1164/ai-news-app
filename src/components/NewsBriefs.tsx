@@ -18,7 +18,7 @@ interface NewsBrief {
   url?: string;
 }
 
-function NewsBriefCard({ brief, language }: { brief: NewsBrief, language: string }) {
+function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language: string, index: number }) {
   const [showAlt, setShowAlt] = useState(false);
   const [altData, setAltData] = useState<AlternativePerspectiveOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,6 +29,7 @@ function NewsBriefCard({ brief, language }: { brief: NewsBrief, language: string
   const translationCache = useRef<Record<string, TranslateNewsOutput>>({});
 
   useEffect(() => {
+    let isMounted = true;
     const handleTranslation = async () => {
       if (language === "English") {
         setTranslatedData(null);
@@ -42,23 +43,32 @@ function NewsBriefCard({ brief, language }: { brief: NewsBrief, language: string
       }
 
       setIsTranslating(true);
+      
+      // STAGGERED REQUESTS: Delay each card's translation based on its index
+      // to avoid hitting the 20 RPM limit simultaneously.
+      await new Promise(resolve => setTimeout(resolve, index * 800));
+
       try {
+        if (!isMounted) return;
         const result = await translateNews({
           title: brief.title,
           content: brief.content,
           targetLanguage: language
         });
-        translationCache.current[cacheKey] = result;
-        setTranslatedData(result);
+        if (isMounted) {
+          translationCache.current[cacheKey] = result;
+          setTranslatedData(result);
+        }
       } catch (error) {
         console.error("Translation failed:", error);
       } finally {
-        setIsTranslating(false);
+        if (isMounted) setIsTranslating(false);
       }
     };
 
     handleTranslation();
-  }, [language, brief]);
+    return () => { isMounted = false; };
+  }, [language, brief, index]);
 
   const handleToggle = async () => {
     if (!showAlt && !altData) {
@@ -92,7 +102,7 @@ function NewsBriefCard({ brief, language }: { brief: NewsBrief, language: string
             </span>
             {isTranslating && (
               <span className="flex items-center gap-1 text-[8px] font-bold text-primary/40 uppercase animate-pulse">
-                <Languages size={10} /> Translating to {language}...
+                <Languages size={10} /> Queued for {language}...
               </span>
             )}
           </div>
@@ -269,15 +279,12 @@ export function NewsBriefs({ category, country, language, onIntelligenceClick }:
       <div className="grid gap-6">
         {briefs.length > 0 ? (
           briefs.map((brief, index) => {
-            if (briefs.length === index + 1) {
-              return (
-                <div ref={lastElementRef} key={brief.id}>
-                  <NewsBriefCard brief={brief} language={language} />
-                </div>
-              );
-            } else {
-              return <NewsBriefCard key={brief.id} brief={brief} language={language} />;
-            }
+            const isLast = briefs.length === index + 1;
+            return (
+              <div ref={isLast ? lastElementRef : undefined} key={brief.id}>
+                <NewsBriefCard brief={brief} language={language} index={index} />
+              </div>
+            );
           })
         ) : (
           <div className="flex flex-col items-center justify-center p-12 glass rounded-3xl text-center space-y-4">
