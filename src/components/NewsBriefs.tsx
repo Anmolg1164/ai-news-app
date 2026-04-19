@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -15,6 +14,7 @@ interface NewsBrief {
   content: string;
   category: string;
   publishedAt: string;
+  url?: string;
 }
 
 function NewsBriefCard({ brief }: { brief: NewsBrief }) {
@@ -99,9 +99,16 @@ function NewsBriefCard({ brief }: { brief: NewsBrief }) {
           <ArrowLeftRight size={14} />
           {showAlt ? "Original Feed" : "Perspective Switch"}
         </Button>
-        <button className="flex items-center gap-1 text-[10px] font-bold text-primary/40 hover:text-secondary uppercase tracking-widest transition-colors">
-          Full Coverage <ExternalLink size={12} />
-        </button>
+        {brief.url && (
+          <a 
+            href={brief.url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-[10px] font-bold text-primary/40 hover:text-secondary uppercase tracking-widest transition-colors"
+          >
+            Full Coverage <ExternalLink size={12} />
+          </a>
+        )}
       </CardFooter>
     </Card>
   );
@@ -120,18 +127,20 @@ export function NewsBriefs({ category, country }: NewsBriefsProps) {
     async function fetchLiveNews() {
       setLoading(true);
       try {
-        // We use the tool directly to fetch latest news based on category and country
         const query = `${category} news in ${country}`;
         const rawResults = await searchNewsTool({ query });
         
-        // Parse the tool's raw string output back into objects for the feed
-        // In a real app, the tool would return structured data, but we'll parse the bullet points
-        const parsedBriefs = rawResults.split('\n').filter(line => line.startsWith('- ')).map((line, idx) => {
-          const [title, ...descParts] = line.replace('- ', '').split(': ');
+        // Parse the tool's raw string output back into objects
+        const parsedBriefs = rawResults.split('\n').filter(line => line.includes('[TITLE]:')).map((line, idx) => {
+          const titleMatch = line.match(/\[TITLE\]: (.*?) \| \[DESC\]:/);
+          const descMatch = line.match(/\[DESC\]: (.*?) \| \[LINK\]:/);
+          const linkMatch = line.match(/\[LINK\]: (.*)$/);
+
           return {
             id: `news-${idx}`,
-            title: title || "Headline",
-            content: descParts.join(': ') || "Latest update available.",
+            title: titleMatch ? titleMatch[1] : "Headline",
+            content: descMatch ? descMatch[1] : "Latest update available.",
+            url: linkMatch ? linkMatch[1] : undefined,
             category: category,
             publishedAt: new Date().toLocaleDateString()
           };
@@ -151,7 +160,7 @@ export function NewsBriefs({ category, country }: NewsBriefsProps) {
   if (loading) {
     return (
       <div className="space-y-6">
-        {[1, 2, 3, 4, 5].map(i => (
+        {[1, 2, 3, 4].map(i => (
           <Skeleton key={i} className="h-48 w-full rounded-2xl glass" />
         ))}
       </div>

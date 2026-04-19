@@ -46,8 +46,8 @@ export const searchNews = ai.defineTool(
       );
       const data = await response.json();
       const results = (data.results || [])
-        .slice(0, 3)
-        .map((r: any) => `- ${r.title}: ${r.description}`)
+        .slice(0, 10)
+        .map((r: any) => `[TITLE]: ${r.title} | [DESC]: ${r.description} | [LINK]: ${r.link}`)
         .join('\n');
       return results || "No news found for this query.";
     } catch (e) {
