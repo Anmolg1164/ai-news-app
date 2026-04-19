@@ -1,11 +1,27 @@
 "use client";
 
-import { Plane, Globe, ShieldCheck, Map, TrendingUp, Info, Sun, Coins, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { 
+  Plane, 
+  Globe, 
+  ShieldCheck, 
+  Map, 
+  Sun, 
+  Coins, 
+  AlertTriangle, 
+  ArrowLeftRight, 
+  Loader2, 
+  Info,
+  Layers
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
+import { getAlternativePerspective, type AlternativePerspectiveOutput } from "@/ai/flows/get-alternative-perspective";
 
 interface TravelIntelligenceProps {
   data?: JourneyIntelligenceOutput | null;
+  category?: string;
 }
 
 const DEFAULT_INTELLIGENCE = [
@@ -25,7 +41,30 @@ const DEFAULT_INTELLIGENCE = [
   }
 ];
 
-export function TravelIntelligence({ data }: TravelIntelligenceProps) {
+export function TravelIntelligence({ data, category }: TravelIntelligenceProps) {
+  const [altPerspective, setAltPerspective] = useState<AlternativePerspectiveOutput | null>(null);
+  const [isLoadingAlt, setIsLoadingAlt] = useState(false);
+  const [showAlt, setShowAlt] = useState(false);
+
+  const handleTogglePerspective = async () => {
+    if (!showAlt && !altPerspective && data && category) {
+      setIsLoadingAlt(true);
+      try {
+        const result = await getAlternativePerspective({
+          category,
+          originalSummary: data.summary,
+          currentRegion: data.sourceRegion
+        });
+        setAltPerspective(result);
+      } catch (error) {
+        console.error("Alternative perspective failed:", error);
+      } finally {
+        setIsLoadingAlt(false);
+      }
+    }
+    setShowAlt(!showAlt);
+  };
+
   if (data) {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -33,14 +72,58 @@ export function TravelIntelligence({ data }: TravelIntelligenceProps) {
           <h2 className="text-2xl font-headline font-bold text-primary flex items-center gap-2">
             <Map className="text-secondary" /> {data.country || "Global"} Insights
           </h2>
+          <Badge variant="outline" className="text-[10px] font-bold tracking-widest uppercase">
+            {data.sourceRegion} Feed
+          </Badge>
         </div>
 
         <div className="p-5 rounded-2xl glass border-primary/10 space-y-4">
-          <p className="text-primary font-medium leading-relaxed">
-            {data.summary}
-          </p>
+          <div className="relative overflow-hidden">
+            <div className={`transition-all duration-500 ${showAlt ? "-translate-x-full opacity-0 absolute" : "translate-x-0 opacity-100"}`}>
+              <p className="text-primary font-medium leading-relaxed">
+                {data.summary}
+              </p>
+            </div>
+            
+            {altPerspective && (
+              <div className={`transition-all duration-500 ${showAlt ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 absolute"}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground text-[10px]">
+                    {altPerspective.altRegion} Perspective
+                  </Badge>
+                </div>
+                <p className="text-primary font-medium leading-relaxed italic">
+                  {altPerspective.altSummary}
+                </p>
+                <div className="mt-4 p-3 rounded-xl bg-secondary/10 border border-secondary/20">
+                  <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1 flex items-center gap-1">
+                    <ArrowLeftRight size={10} /> Perspective Shift
+                  </h4>
+                  <p className="text-xs text-primary/80 leading-relaxed">
+                    {altPerspective.differenceAnalysis}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleTogglePerspective}
+            disabled={isLoadingAlt}
+            className="w-full mt-2 border border-primary/5 hover:bg-primary/5 text-primary/60 hover:text-primary gap-2 h-8 text-xs font-bold uppercase tracking-tighter"
+          >
+            {isLoadingAlt ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : showAlt ? (
+              <><Layers size={14} /> Back to Primary</>
+            ) : (
+              <><ArrowLeftRight size={14} /> See Other Perspective</>
+            )}
+          </Button>
           
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 pt-2">
             {data.weather && (
               <div className="p-3 rounded-xl bg-amber-50 border border-amber-100 flex items-center gap-2">
                 <Sun size={18} className="text-amber-600" />

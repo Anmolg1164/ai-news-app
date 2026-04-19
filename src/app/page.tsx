@@ -12,15 +12,17 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 
 export default function Home() {
   const [intelligenceData, setIntelligenceData] = useState<JourneyIntelligenceOutput | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>("");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleCategoryClick = async (category: string) => {
     setIsLoading(true);
+    setActiveCategory(category);
     try {
       const result = await getJourneyIntelligence({ category });
       setIntelligenceData(result);
-      if (result.country) {
+      if (result.country || result.summary) {
         setIsSheetOpen(true);
       }
     } catch (error) {
@@ -130,7 +132,7 @@ export default function Home() {
               <Sparkles className="text-secondary" /> Agentic Journey Insight
             </SheetTitle>
           </SheetHeader>
-          <TravelIntelligence data={intelligenceData} />
+          <TravelIntelligence data={intelligenceData} category={activeCategory} />
         </SheetContent>
       </Sheet>
 

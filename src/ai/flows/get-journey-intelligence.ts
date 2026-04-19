@@ -1,8 +1,6 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for fetching journey-specific intelligence using real APIs.
- * 
- * - getJourneyIntelligence - Fetches live news, weather, and currency data using Genkit tools.
  */
 
 import { ai } from '@/ai/genkit';
@@ -20,13 +18,14 @@ const JourneyIntelligenceOutputSchema = z.object({
   weather: z.string().nullable().describe('Current weather conditions in that country.'),
   currency: z.string().nullable().describe('Local currency and approximate exchange rate to USD.'),
   travelAlert: z.string().nullable().describe('A brief travel advisory if applicable.'),
+  sourceRegion: z.string().describe('The primary geographical region of the news sources (e.g. North America, Asia, Europe).'),
 });
 export type JourneyIntelligenceOutput = z.infer<typeof JourneyIntelligenceOutputSchema>;
 
 /**
  * Tool to fetch latest news using NewsData.io
  */
-const searchNews = ai.defineTool(
+export const searchNews = ai.defineTool(
   {
     name: 'searchNews',
     description: 'Search for latest news articles based on a query.',
@@ -124,11 +123,12 @@ const journeyIntelligencePrompt = ai.definePrompt({
   Instructions:
   1. Use "searchNews" to find real, latest updates related to "{{category}}".
   2. Identify the primary focus country from the news results.
-  3. If a country is identified:
+  3. Determine the primary geographical region (e.g., Asia, Europe, North America) of the majority of these sources and return it in sourceRegion.
+  4. If a country is identified:
      - Determine its capital or major city and use "getWeather" to fetch real-time conditions.
      - Identify the official currency code (ISO 4217, e.g., INR for India) and use "getExchangeRate" to get the latest USD conversion.
-  4. Write a concise 2-sentence summary of the fetched news.
-  5. Check for any specific travel warnings or alerts in the news and include them in travelAlert.
+  5. Write a concise 2-sentence summary of the fetched news.
+  6. Check for any specific travel warnings or alerts in the news and include them in travelAlert.
   
   If no specific country is identified, set country, weather, and currency to null.`,
 });
