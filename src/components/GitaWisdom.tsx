@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -44,6 +45,9 @@ export function GitaWisdom() {
   const [loading, setLoading] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  
+  // Cache to prevent re-fetching the same translation and exhausting quota
+  const translationCache = useRef<Record<string, TranslateVerseOutput>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
@@ -57,6 +61,7 @@ export function GitaWisdom() {
   }, [verses.length]);
 
   const handleInterpret = async () => {
+    if (loading) return;
     setLoading(true);
     try {
       const result = await interpretGitaVerse({ verse: currentVerse.sanskrit });
@@ -65,7 +70,7 @@ export function GitaWisdom() {
       toast({
         variant: "destructive",
         title: "Wisdom Service Busy",
-        description: "The AI is currently processing many requests. Please wait a moment and try again.",
+        description: "The AI reached its limit. Please wait a few seconds and try again.",
       });
     } finally {
       setLoading(false);
@@ -73,11 +78,20 @@ export function GitaWisdom() {
   };
 
   const handleLanguageChange = async (lang: string) => {
+    if (isTranslating) return;
     setSelectedLanguage(lang);
+    
     if (lang === "English") {
       setTranslation(null);
       return;
     }
+
+    const cacheKey = `${verseIndex}-${lang}`;
+    if (translationCache.current[cacheKey]) {
+      setTranslation(translationCache.current[cacheKey]);
+      return;
+    }
+
     setIsTranslating(true);
     try {
       const result = await translateVerse({
@@ -85,12 +99,15 @@ export function GitaWisdom() {
         english: currentVerse.english,
         targetLanguage: lang
       });
-      setTranslation(result);
+      if (result) {
+        translationCache.current[cacheKey] = result;
+        setTranslation(result);
+      }
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Translation Error",
-        description: "We couldn't translate the verse right now. The service might be over capacity.",
+        description: "Quota limit reached. Reverting to English for now.",
       });
       setSelectedLanguage("English");
     } finally {
@@ -99,6 +116,7 @@ export function GitaWisdom() {
   };
 
   const handlePlayAudio = async () => {
+    if (isPlaying) return;
     const textToRead = translation ? translation.translatedVerse : currentVerse.english;
     setIsPlaying(true);
     try {
@@ -130,9 +148,9 @@ export function GitaWisdom() {
       "parchment overflow-hidden border-none transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
       "relative group"
     )}>
-      <audio ref={audioRef} className="hidden" />
+      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} className="hidden" />
       
-      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
         <ScrollText size={80} />
       </div>
       
@@ -143,12 +161,12 @@ export function GitaWisdom() {
           </CardTitle>
           <div className="flex items-center gap-1">
              <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
-              <SelectTrigger className="h-8 w-[100px] bg-[#eee1c5]/30 border-[#b4945e]/20 text-[#5c4b37] text-xs">
+              <SelectTrigger className="h-8 w-[100px] bg-[#eee1c5]/30 border-[#b4945e]/20 text-[#5c4b37] text-xs focus:ring-0">
                 <SelectValue placeholder="Lang" />
               </SelectTrigger>
               <SelectContent className="bg-[#fdf6e3] border-[#e2d1a3]">
                 {LANGUAGES.map(lang => (
-                  <SelectItem key={lang.value} value={lang.value} className="text-[#5c4b37] hover:bg-[#eee1c5]">
+                  <SelectItem key={lang.value} value={lang.value} className="text-[#5c4b37] hover:bg-[#eee1c5] cursor-pointer">
                     {lang.label}
                   </SelectItem>
                 ))}
@@ -160,7 +178,7 @@ export function GitaWisdom() {
               onClick={nextVerse} 
               className="h-8 w-8 text-[#5c4b37] hover:bg-[#eee1c5]/50 rounded-full"
             >
-              <RefreshCw size={14} />
+              <RefreshCw size={14} className={cn(loading ? "animate-spin" : "")} />
             </Button>
           </div>
         </div>
@@ -185,7 +203,7 @@ export function GitaWisdom() {
                 variant="ghost" 
                 size="icon" 
                 onClick={handlePlayAudio}
-                disabled={isPlaying}
+                disabled={isPlaying || isTranslating}
                 className="h-6 w-6 text-[#b4945e] hover:bg-[#eee1c5]"
               >
                 {isPlaying ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />}
@@ -201,7 +219,6 @@ export function GitaWisdom() {
           <div className="space-y-2 pt-4">
             <Skeleton className="h-4 w-full bg-[#eee1c5]" />
             <Skeleton className="h-4 w-5/6 bg-[#eee1c5]" />
-            <Skeleton className="h-4 w-4/6 bg-[#eee1c5]" />
           </div>
         )}
 

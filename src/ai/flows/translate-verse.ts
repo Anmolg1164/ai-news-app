@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for translating Bhagavad Gita verses into a target language.
@@ -27,12 +28,12 @@ const translateVersePrompt = ai.definePrompt({
   name: 'translateVersePrompt',
   input: { schema: TranslateVerseInputSchema },
   output: { schema: TranslateVerseOutputSchema },
-  prompt: `You are an expert linguist and spiritual scholar.
-Translate the following Bhagavad Gita verse and its English meaning into {{{targetLanguage}}}.
-Provide a beautiful, poetic translation of the verse itself and a clear, simple explanation of its spiritual essence.
+  prompt: `You are an expert spiritual scholar and linguist.
+Translate the following Bhagavad Gita verse and its meaning into {{{targetLanguage}}}.
+Keep the translation poetic yet clear.
 
 Sanskrit: {{{verse}}}
-English: {{{english}}}
+Meaning: {{{english}}}
 Target Language: {{{targetLanguage}}}`,
 });
 
@@ -49,12 +50,13 @@ const translateVerseFlow = ai.defineFlow(
     while (retries < maxRetries) {
       try {
         const { output } = await translateVersePrompt(input);
-        return output!;
+        if (!output) throw new Error('Empty response from AI');
+        return output;
       } catch (error: any) {
         const isRateLimit = error.message?.includes('429') || error.status === 429;
         if (isRateLimit && retries < maxRetries - 1) {
           retries++;
-          // Exponential backoff: 2s, 4s, 8s...
+          // Exponential backoff: 2s, 4s, 8s
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 1000));
           continue;
         }
