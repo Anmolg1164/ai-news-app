@@ -1,10 +1,11 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Dharma Navigator | Journey, Wisdom, Serenity',
-  description: 'AI-powered travel intelligence and Gita wisdom navigator.',
+  title: 'G newsMola | Global News & Spiritual Wisdom',
+  description: 'Your agentic news companion with spiritual clarity.',
 };
 
 export default function RootLayout({
