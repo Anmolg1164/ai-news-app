@@ -47,6 +47,22 @@
   @apply bg-black/10 backdrop-blur-md border border-white/10 shadow-lg;
 }
 
+.parchment {
+  @apply bg-[#fdf6e3] border-[#e2d1a3] text-[#5c4b37] shadow-xl rounded-2xl;
+  background-image: radial-gradient(#eee1c5 1px, transparent 0);
+  background-size: 24px 24px;
+  position: relative;
+}
+
+.parchment::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 .pill-nav {
   @apply fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 rounded-full glass z-50;
 }
