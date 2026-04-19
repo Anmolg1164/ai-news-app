@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -8,15 +9,13 @@ import {
   Map, 
   Sun, 
   Coins, 
-  AlertTriangle, 
   ArrowLeftRight, 
   Loader2, 
-  Info,
   Layers,
   Mic,
-  MicOff,
   Volume2,
-  HelpCircle
+  HelpCircle,
+  Play
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,15 +61,16 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
 
   const { startVAD, isSpeaking } = useVAD({
     onSpeechStart: () => {
-      if (audioRef.current) {
+      // INTERRUPT: If the user starts speaking, stop the AI audio immediately
+      if (audioRef.current && isAiTalking) {
         audioRef.current.pause();
         setIsAiTalking(false);
         setStatusMessage("Listening to you...");
       }
     },
     onSpeechEnd: async (blob) => {
-      if (!data) return;
-      setStatusMessage("Thinking...");
+      if (!data || !isInteractiveMode) return;
+      setStatusMessage("Processing your question...");
       
       const reader = new FileReader();
       reader.onloadend = async () => {
@@ -89,7 +89,7 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
           }
         } catch (error) {
           console.error("Voice chat failed:", error);
-          setStatusMessage("Sorry, I missed that.");
+          setStatusMessage("I couldn't hear you clearly.");
         }
       };
       reader.readAsDataURL(blob);
@@ -109,10 +109,11 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
         audioRef.current.src = media;
         audioRef.current.play();
         setIsAiTalking(true);
-        setStatusMessage("Reading briefing...");
+        setStatusMessage("Reading briefing (Talk to interrupt)");
       }
     } catch (error) {
       console.error("Briefing failed:", error);
+      setStatusMessage("Briefing unavailable.");
     }
   };
 
@@ -166,7 +167,7 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
                   </PopoverTrigger>
                   <PopoverContent className="w-64 glass p-4 text-xs">
                     <div className="space-y-1">
-                      <p className="font-bold text-primary uppercase tracking-tighter">Explain Like I'm Five</p>
+                      <p className="font-bold text-primary uppercase tracking-tighter">ELIF: {term}</p>
                       <p className="text-primary/80 leading-relaxed italic">
                         "{explanation}"
                       </p>
@@ -207,7 +208,7 @@ export function TravelIntelligence({ data, category }: TravelIntelligenceProps) 
                 onClick={startBriefing}
                 className="rounded-full bg-primary text-white gap-2 px-6 shadow-xl hover:scale-105 transition-transform"
               >
-                <Volume2 size={18} /> Start Voice Briefing
+                <Play size={18} fill="currentColor" /> Start Voice Briefing
               </Button>
             ) : (
               <div className="flex flex-col items-center gap-2">
