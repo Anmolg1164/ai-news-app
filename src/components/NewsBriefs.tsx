@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe, Languages } from "lucide-react";
@@ -45,8 +44,8 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
 
       setIsTranslating(true);
       
-      // STAGGERED REQUESTS: Delay each card's translation to avoid 429
-      await new Promise(resolve => setTimeout(resolve, index * 800));
+      // Staggered requests to prevent overwhelming the free tier
+      await new Promise(resolve => setTimeout(resolve, index * 600));
 
       try {
         if (!isMounted) return;
@@ -178,9 +177,17 @@ interface NewsBriefsProps {
   country: string;
   language: string;
   onIntelligenceClick?: () => void;
+  onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
 }
 
-export function NewsBriefs({ category, searchQuery, country, language, onIntelligenceClick }: NewsBriefsProps) {
+export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({ 
+  category, 
+  searchQuery, 
+  country, 
+  language, 
+  onIntelligenceClick,
+  onScroll 
+}, ref) => {
   const [briefs, setBriefs] = useState<NewsBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -244,19 +251,10 @@ export function NewsBriefs({ category, searchQuery, country, language, onIntelli
     if (node) observer.current.observe(node);
   }, [loading, loadingMore, nextPage, fetchLiveNews]);
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        {[1, 2, 3, 4].map(i => (
-          <Skeleton key={i} className="h-48 w-full rounded-2xl glass" />
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <div className="grid gap-8">
-      <div className="flex items-center justify-between gap-3 px-2">
+    <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-8 duration-700">
+      {/* Fixed Header within the column */}
+      <div className="flex items-center justify-between gap-3 px-2 py-4 flex-shrink-0 bg-background/80 backdrop-blur-sm z-10">
         <div className="flex items-center gap-2">
           <Globe className="text-primary/40" size={24} />
           <h2 className="text-3xl font-headline font-bold text-primary tracking-tighter">
@@ -280,8 +278,19 @@ export function NewsBriefs({ category, searchQuery, country, language, onIntelli
         </div>
       </div>
       
-      <div className="grid gap-6">
-        {briefs.length > 0 ? (
+      {/* Independently scrollable area */}
+      <div 
+        ref={ref}
+        onScroll={onScroll}
+        className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-6 pb-40"
+      >
+        {loading ? (
+          <div className="space-y-6">
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton key={i} className="h-48 w-full rounded-2xl glass" />
+            ))}
+          </div>
+        ) : briefs.length > 0 ? (
           briefs.map((brief, index) => {
             const isLast = briefs.length === index + 1;
             return (
@@ -303,6 +312,18 @@ export function NewsBriefs({ category, searchQuery, country, language, onIntelli
           </div>
         )}
       </div>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { 
+          background: hsla(var(--primary), 0.1); 
+          border-radius: 10px; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsla(var(--primary), 0.2); }
+      `}</style>
     </div>
   );
-}
+});
+
+NewsBriefs.displayName = "NewsBriefs";

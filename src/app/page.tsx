@@ -5,7 +5,7 @@ import { Navigation } from "@/components/Navigation";
 import { TravelIntelligence } from "@/components/TravelIntelligence";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
-import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp, Languages, User } from "lucide-react";
+import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp, Languages } from "lucide-react";
 import Image from "next/image";
 import { getJourneyIntelligence, type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -52,18 +52,10 @@ export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
   
-  const newsScrollContainerRef = useRef<HTMLDivElement>(null);
+  const newsScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsMounted(true);
-    const requestMic = async () => {
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (err) {
-        console.error("Microphone access denied:", err);
-      }
-    };
-    requestMic();
   }, []);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -75,16 +67,16 @@ export default function Home() {
     setActiveCategory(category);
     setSearchQuery("");
     setSearchInput("");
-    if (newsScrollContainerRef.current) {
-      newsScrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    if (newsScrollRef.current) {
+      newsScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       setSearchQuery(searchInput);
-      if (newsScrollContainerRef.current) {
-        newsScrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      if (newsScrollRef.current) {
+        newsScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
       }
     }
   };
@@ -111,8 +103,8 @@ export default function Home() {
   };
 
   const scrollToTop = () => {
-    if (newsScrollContainerRef.current) {
-      newsScrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    if (newsScrollRef.current) {
+      newsScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -153,7 +145,7 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-2xl border-primary/10 bg-white/40 gap-2 h-12 px-4 hover:bg-white shadow-sm transition-all">
+                  <Button variant="outline" className="rounded-2xl border-primary/10 bg-white/40 gap-2 h-12 px-4 hover:bg-white shadow-sm transition-all" suppressHydrationWarning>
                     <MapPin size={16} className="text-accent" />
                     <span className="text-xs font-bold uppercase tracking-wider">{activeCountry.name}</span>
                     <ChevronDown size={14} className="opacity-40" />
@@ -174,7 +166,7 @@ export default function Home() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-2xl border-primary/10 bg-white/40 gap-2 h-12 px-4 hover:bg-white shadow-sm transition-all">
+                  <Button variant="outline" className="rounded-2xl border-primary/10 bg-white/40 gap-2 h-12 px-4 hover:bg-white shadow-sm transition-all" suppressHydrationWarning>
                     <Languages size={16} className="text-accent" />
                     <span className="text-xs font-bold uppercase tracking-wider">{activeLanguage.name}</span>
                     <ChevronDown size={14} className="opacity-40" />
@@ -196,7 +188,7 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-5">
-            <button className="relative group p-2 rounded-xl hover:bg-white transition-all">
+            <button className="relative group p-2 rounded-xl hover:bg-white transition-all" suppressHydrationWarning>
               <Bell size={22} className="text-muted-foreground group-hover:text-primary transition-colors" />
               <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-secondary rounded-full border-2 border-white animate-pulse" />
             </button>
@@ -227,23 +219,21 @@ export default function Home() {
               <p className="text-sm opacity-70 leading-relaxed font-medium">
                 Your news feed is currently optimized for <span className="text-secondary font-bold">{activeCountry.name}</span> in <span className="text-secondary font-bold">{activeLanguage.name}</span>.
               </p>
-              <button className="w-full py-4 rounded-2xl bg-secondary text-slate-900 font-bold hover:glow-secondary transition-all hover:scale-[1.02]">
+              <button className="w-full py-4 rounded-2xl bg-secondary text-slate-900 font-bold hover:glow-secondary transition-all hover:scale-[1.02]" suppressHydrationWarning>
                 Refine Preferences
               </button>
             </div>
           </aside>
 
-          <section 
-            ref={newsScrollContainerRef}
-            onScroll={handleScroll}
-            className="lg:col-span-8 overflow-y-auto custom-scrollbar pb-40 h-full animate-in fade-in slide-in-from-bottom-8 duration-700"
-          >
+          <section className="lg:col-span-8 h-full overflow-hidden">
             <NewsBriefs 
               category={activeCategory} 
               searchQuery={searchQuery}
               country={activeCountry.name} 
               language={activeLanguage.name}
               onIntelligenceClick={triggerIntelligence}
+              onScroll={handleScroll}
+              ref={newsScrollRef}
             />
           </section>
         </div>
@@ -275,19 +265,10 @@ export default function Home() {
           "fixed bottom-32 right-10 p-5 rounded-3xl bg-primary text-white shadow-2xl transition-all duration-500 z-50 hover:scale-110 active:scale-95 glow-primary",
           showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20 pointer-events-none"
         )}
+        suppressHydrationWarning
       >
         <ArrowUp size={28} />
       </button>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { 
-          background: hsla(var(--primary), 0.1); 
-          border-radius: 10px; 
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsla(var(--primary), 0.2); }
-      `}</style>
     </div>
   );
 }
