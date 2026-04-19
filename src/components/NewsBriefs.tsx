@@ -1,12 +1,12 @@
-
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe } from "lucide-react";
+import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAlternativePerspective, type AlternativePerspectiveOutput } from "@/ai/flows/get-alternative-perspective";
+import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
 import { searchNews as searchNewsTool } from "@/ai/flows/get-journey-intelligence";
 
 interface NewsBrief {
@@ -18,10 +18,47 @@ interface NewsBrief {
   url?: string;
 }
 
-function NewsBriefCard({ brief }: { brief: NewsBrief }) {
+function NewsBriefCard({ brief, language }: { brief: NewsBrief, language: string }) {
   const [showAlt, setShowAlt] = useState(false);
   const [altData, setAltData] = useState<AlternativePerspectiveOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  const [translatedData, setTranslatedData] = useState<TranslateNewsOutput | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  
+  const translationCache = useRef<Record<string, TranslateNewsOutput>>({});
+
+  useEffect(() => {
+    const handleTranslation = async () => {
+      if (language === "English") {
+        setTranslatedData(null);
+        return;
+      }
+
+      const cacheKey = `${brief.id}-${language}`;
+      if (translationCache.current[cacheKey]) {
+        setTranslatedData(translationCache.current[cacheKey]);
+        return;
+      }
+
+      setIsTranslating(true);
+      try {
+        const result = await translateNews({
+          title: brief.title,
+          content: brief.content,
+          targetLanguage: language
+        });
+        translationCache.current[cacheKey] = result;
+        setTranslatedData(result);
+      } catch (error) {
+        console.error("Translation failed:", error);
+      } finally {
+        setIsTranslating(false);
+      }
+    };
+
+    handleTranslation();
+  }, [language, brief]);
 
   const handleToggle = async () => {
     if (!showAlt && !altData) {
@@ -42,20 +79,30 @@ function NewsBriefCard({ brief }: { brief: NewsBrief }) {
     setShowAlt(!showAlt);
   };
 
+  const currentTitle = translatedData?.translatedTitle || brief.title;
+  const currentContent = translatedData?.translatedContent || brief.content;
+
   return (
     <Card className="border-none glass overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:bg-white/40">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold text-secondary-foreground bg-secondary/30 px-2 py-1 rounded-md uppercase tracking-wider">
-            {brief.category}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-secondary-foreground bg-secondary/30 px-2 py-1 rounded-md uppercase tracking-wider">
+              {brief.category}
+            </span>
+            {isTranslating && (
+              <span className="flex items-center gap-1 text-[8px] font-bold text-primary/40 uppercase animate-pulse">
+                <Languages size={10} /> Translating to {language}...
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium">
             <Calendar size={12} />
             {brief.publishedAt || "Recently"}
           </div>
         </div>
         <CardTitle className="text-xl font-headline text-primary font-bold tracking-tight">
-          {brief.title}
+          {currentTitle}
         </CardTitle>
       </CardHeader>
       
@@ -63,7 +110,7 @@ function NewsBriefCard({ brief }: { brief: NewsBrief }) {
         <div className="relative">
           <div className={`transition-all duration-500 ${showAlt ? "opacity-30 blur-[1px]" : "opacity-100"}`}>
             <p className="text-primary/70 leading-relaxed text-sm">
-              {brief.content}
+              {currentContent}
             </p>
           </div>
 
@@ -118,10 +165,11 @@ function NewsBriefCard({ brief }: { brief: NewsBrief }) {
 interface NewsBriefsProps {
   category: string;
   country: string;
+  language: string;
   onIntelligenceClick?: () => void;
 }
 
-export function NewsBriefs({ category, country, onIntelligenceClick }: NewsBriefsProps) {
+export function NewsBriefs({ category, country, language, onIntelligenceClick }: NewsBriefsProps) {
   const [briefs, setBriefs] = useState<NewsBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -204,7 +252,7 @@ export function NewsBriefs({ category, country, onIntelligenceClick }: NewsBrief
         
         <div className="flex items-center gap-4">
           <span className="hidden sm:inline text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
-            {country} Feed
+            {country} ({language}) Feed
           </span>
           <Button 
             onClick={onIntelligenceClick} 
@@ -224,11 +272,11 @@ export function NewsBriefs({ category, country, onIntelligenceClick }: NewsBrief
             if (briefs.length === index + 1) {
               return (
                 <div ref={lastElementRef} key={brief.id}>
-                  <NewsBriefCard brief={brief} />
+                  <NewsBriefCard brief={brief} language={language} />
                 </div>
               );
             } else {
-              return <NewsBriefCard key={brief.id} brief={brief} />;
+              return <NewsBriefCard key={brief.id} brief={brief} language={language} />;
             }
           })
         ) : (

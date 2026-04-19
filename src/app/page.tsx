@@ -5,7 +5,7 @@ import { Navigation } from "@/components/Navigation";
 import { TravelIntelligence } from "@/components/TravelIntelligence";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
-import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp } from "lucide-react";
+import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp, Languages } from "lucide-react";
 import Image from "next/image";
 import { getJourneyIntelligence, type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -28,10 +28,21 @@ const COUNTRIES = [
   { code: "au", name: "Australia" },
 ];
 
+const LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "hi", name: "Hindi" },
+  { code: "or", name: "Odia" },
+  { code: "bho", name: "Bhojpuri" },
+  { code: "pa", name: "Punjabi" },
+  { code: "bn", name: "Bengali" },
+  { code: "gu", name: "Gujarati" },
+];
+
 export default function Home() {
   const [intelligenceData, setIntelligenceData] = useState<JourneyIntelligenceOutput | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("World");
   const [activeCountry, setActiveCountry] = useState(COUNTRIES[0]);
+  const [activeLanguage, setActiveLanguage] = useState(LANGUAGES[0]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -43,7 +54,6 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Request microphone access immediately on load
     const requestMic = async () => {
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -61,7 +71,6 @@ export default function Home() {
 
   const handleCategoryClick = (category: string) => {
     setActiveCategory(category);
-    // Scroll back to top of news when category changes
     if (newsScrollContainerRef.current) {
       newsScrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -115,8 +124,8 @@ export default function Home() {
             </h1>
           </div>
           
-          <div className="hidden md:flex flex-1 max-w-md mx-8 gap-4">
-            <div className="relative w-full">
+          <div className="hidden md:flex flex-1 max-w-xl mx-8 gap-4">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
               <input 
                 type="text" 
@@ -126,25 +135,49 @@ export default function Home() {
               />
             </div>
             
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="rounded-full border-primary/10 bg-white/50 gap-2">
-                  <span className="text-xs font-bold uppercase">{activeCountry.name}</span>
-                  <ChevronDown size={14} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="glass">
-                {COUNTRIES.map((c) => (
-                  <DropdownMenuItem 
-                    key={c.code} 
-                    onClick={() => setActiveCountry(c)}
-                    className="cursor-pointer"
-                  >
-                    {c.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="rounded-full border-primary/10 bg-white/50 gap-2 h-10 px-4">
+                    <MapPin size={14} className="text-secondary" />
+                    <span className="text-xs font-bold uppercase">{activeCountry.name}</span>
+                    <ChevronDown size={14} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="glass">
+                  {COUNTRIES.map((c) => (
+                    <DropdownMenuItem 
+                      key={c.code} 
+                      onClick={() => setActiveCountry(c)}
+                      className="cursor-pointer"
+                    >
+                      {c.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="rounded-full border-primary/10 bg-white/50 gap-2 h-10 px-4">
+                    <Languages size={14} className="text-secondary" />
+                    <span className="text-xs font-bold uppercase">{activeLanguage.name}</span>
+                    <ChevronDown size={14} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="glass">
+                  {LANGUAGES.map((l) => (
+                    <DropdownMenuItem 
+                      key={l.code} 
+                      onClick={() => setActiveLanguage(l)}
+                      className="cursor-pointer"
+                    >
+                      {l.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -175,7 +208,6 @@ export default function Home() {
 
       <main className="flex-1 overflow-hidden container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full py-8">
-          {/* Sidebar - Gita Wisdom stays in place if there's enough height, or scrolls within itself */}
           <aside className="lg:col-span-4 space-y-8 overflow-y-auto pr-2 custom-scrollbar hidden lg:block">
             <section className="animate-in fade-in slide-in-from-left-4 duration-500">
               <GitaWisdom isListening={isUserSpeaking} />
@@ -186,7 +218,7 @@ export default function Home() {
                 <MapPin className="text-secondary" /> Local Expedition
               </div>
               <p className="text-sm opacity-80 leading-relaxed">
-                Stay updated on your local surroundings in {activeCountry.name}. Your news feed is currently optimized for this region.
+                Stay updated on your local surroundings in {activeCountry.name}. Your news feed is currently optimized for this region and language ({activeLanguage.name}).
               </p>
               <button 
                 onClick={() => handleIconClick("Preferences")}
@@ -197,7 +229,6 @@ export default function Home() {
             </div>
           </aside>
 
-          {/* Main Content - Only news cards scroll */}
           <section 
             ref={newsScrollContainerRef}
             onScroll={handleScroll}
@@ -206,6 +237,7 @@ export default function Home() {
             <NewsBriefs 
               category={activeCategory} 
               country={activeCountry.name} 
+              language={activeLanguage.name}
               onIntelligenceClick={triggerIntelligence}
             />
           </section>
