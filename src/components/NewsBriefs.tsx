@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe } from "lucide-react";
@@ -99,7 +99,7 @@ function NewsBriefCard({ brief }: { brief: NewsBrief }) {
           <ArrowLeftRight size={14} />
           {showAlt ? "Original Feed" : "Perspective Switch"}
         </Button>
-        {brief.url && (
+        {brief.url && ( brief.url.startsWith('http') ) && (
           <a 
             href={brief.url} 
             target="_blank" 
@@ -122,40 +122,63 @@ interface NewsBriefsProps {
 export function NewsBriefs({ category, country }: NewsBriefsProps) {
   const [briefs, setBriefs] = useState<NewsBrief[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextPage, setNextPage] = useState<string | null>(null);
+  const observer = useRef<IntersectionObserver | null>(null);
+
+  const fetchLiveNews = useCallback(async (isInitial = true) => {
+    if (isInitial) setLoading(true);
+    else setLoadingMore(true);
+
+    try {
+      const query = `${category} news in ${country}`;
+      const rawResults = await searchNewsTool({ 
+        query, 
+        page: isInitial ? undefined : nextPage || undefined 
+      });
+      
+      const parsed = JSON.parse(rawResults);
+      if (parsed.error) throw new Error(parsed.error);
+
+      const newBriefs = (parsed.results || []).map((r: any, idx: number) => ({
+        id: `news-${isInitial ? '' : briefs.length}-${idx}-${Math.random().toString(36).substr(2, 9)}`,
+        title: r.title || "Headline",
+        content: r.description || "Latest update available.",
+        url: r.link,
+        category: category,
+        publishedAt: r.pubDate ? new Date(r.pubDate).toLocaleDateString() : new Date().toLocaleDateString()
+      }));
+
+      if (isInitial) {
+        setBriefs(newBriefs);
+      } else {
+        setBriefs(prev => [...prev, ...newBriefs]);
+      }
+      setNextPage(parsed.nextPage);
+    } catch (error) {
+      console.error("Live news fetch failed:", error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [category, country, nextPage, briefs.length]);
 
   useEffect(() => {
-    async function fetchLiveNews() {
-      setLoading(true);
-      try {
-        const query = `${category} news in ${country}`;
-        const rawResults = await searchNewsTool({ query });
-        
-        // Parse the tool's raw string output back into objects
-        const parsedBriefs = rawResults.split('\n').filter(line => line.includes('[TITLE]:')).map((line, idx) => {
-          const titleMatch = line.match(/\[TITLE\]: (.*?) \| \[DESC\]:/);
-          const descMatch = line.match(/\[DESC\]: (.*?) \| \[LINK\]:/);
-          const linkMatch = line.match(/\[LINK\]: (.*)$/);
-
-          return {
-            id: `news-${idx}`,
-            title: titleMatch ? titleMatch[1] : "Headline",
-            content: descMatch ? descMatch[1] : "Latest update available.",
-            url: linkMatch ? linkMatch[1] : undefined,
-            category: category,
-            publishedAt: new Date().toLocaleDateString()
-          };
-        });
-
-        setBriefs(parsedBriefs);
-      } catch (error) {
-        console.error("Live news fetch failed:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchLiveNews();
+    fetchLiveNews(true);
   }, [category, country]);
+
+  const lastElementRef = useCallback((node: HTMLDivElement) => {
+    if (loading || loadingMore) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && nextPage) {
+        fetchLiveNews(false);
+      }
+    });
+    
+    if (node) observer.current.observe(node);
+  }, [loading, loadingMore, nextPage, fetchLiveNews]);
 
   if (loading) {
     return (
@@ -184,13 +207,27 @@ export function NewsBriefs({ category, country }: NewsBriefsProps) {
       
       <div className="grid gap-6">
         {briefs.length > 0 ? (
-          briefs.map((brief) => (
-            <NewsBriefCard key={brief.id} brief={brief} />
-          ))
+          briefs.map((brief, index) => {
+            if (briefs.length === index + 1) {
+              return (
+                <div ref={lastElementRef} key={brief.id}>
+                  <NewsBriefCard brief={brief} />
+                </div>
+              );
+            } else {
+              return <NewsBriefCard key={brief.id} brief={brief} />;
+            }
+          })
         ) : (
           <div className="flex flex-col items-center justify-center p-12 glass rounded-3xl text-center space-y-4">
             <Newspaper className="text-primary/20" size={48} />
             <p className="text-primary/40 font-bold uppercase tracking-widest text-xs">No active headlines for this selection</p>
+          </div>
+        )}
+
+        {loadingMore && (
+          <div className="flex justify-center p-8">
+            <Loader2 className="animate-spin text-primary" size={32} />
           </div>
         )}
       </div>

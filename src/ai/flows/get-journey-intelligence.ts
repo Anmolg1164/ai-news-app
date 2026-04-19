@@ -28,30 +28,45 @@ export type JourneyIntelligenceOutput = z.infer<typeof JourneyIntelligenceOutput
 
 /**
  * Tool to fetch latest news using NewsData.io
+ * Updated to return structured JSON for better pagination handling
  */
 export const searchNews = ai.defineTool(
   {
     name: 'searchNews',
-    description: 'Search for latest news articles based on a query.',
-    inputSchema: z.object({ query: z.string() }),
+    description: 'Search for latest news articles based on a query. Supports pagination via page parameter.',
+    inputSchema: z.object({ 
+      query: z.string(),
+      page: z.string().optional().describe('The nextPage token from a previous response.')
+    }),
     outputSchema: z.string(),
   },
-  async ({ query }) => {
+  async ({ query, page }) => {
     const apiKey = process.env.NEWS_API_KEY;
-    if (!apiKey) return "News API key missing.";
+    if (!apiKey) return JSON.stringify({ error: "News API key missing." });
     
     try {
-      const response = await fetch(
-        `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`
-      );
+      let url = `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`;
+      if (page) {
+        url += `&page=${page}`;
+      }
+      
+      const response = await fetch(url);
       const data = await response.json();
-      const results = (data.results || [])
-        .slice(0, 10)
-        .map((r: any) => `[TITLE]: ${r.title} | [DESC]: ${r.description} | [LINK]: ${r.link}`)
-        .join('\n');
-      return results || "No news found for this query.";
+      
+      const results = (data.results || []).map((r: any) => ({
+        title: r.title,
+        description: r.description || r.content || "No description available.",
+        link: r.link,
+        pubDate: r.pubDate,
+        source_id: r.source_id
+      }));
+
+      return JSON.stringify({
+        results,
+        nextPage: data.nextPage || null
+      });
     } catch (e) {
-      return "Error fetching news.";
+      return JSON.stringify({ error: "Error fetching news." });
     }
   }
 );

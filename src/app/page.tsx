@@ -1,12 +1,11 @@
-
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigation } from "@/components/Navigation";
 import { TravelIntelligence } from "@/components/TravelIntelligence";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
-import { MapPin, Search, Bell, Sparkles, ChevronDown } from "lucide-react";
+import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp } from "lucide-react";
 import Image from "next/image";
 import { getJourneyIntelligence, type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -18,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const COUNTRIES = [
   { code: "in", name: "India" },
@@ -34,7 +34,16 @@ export default function Home() {
   const [activeCountry, setActiveCountry] = useState(COUNTRIES[0]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleCategoryClick = async (category: string) => {
     setActiveCategory(category);
@@ -50,6 +59,10 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleIconClick = (feature: string) => {
@@ -173,6 +186,16 @@ export default function Home() {
       </Sheet>
 
       <Navigation onCategoryClick={handleCategoryClick} isProcessing={isLoading} />
+
+      <button
+        onClick={scrollToTop}
+        className={cn(
+          "fixed bottom-24 right-8 p-4 rounded-full bg-primary text-white shadow-2xl transition-all duration-300 z-50 hover:scale-110",
+          showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
+        )}
+      >
+        <ArrowUp size={24} />
+      </button>
     </div>
   );
 }
