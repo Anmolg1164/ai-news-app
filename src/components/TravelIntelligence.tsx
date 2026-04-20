@@ -16,7 +16,9 @@ import {
   Volume2,
   HelpCircle,
   Play,
-  Sparkles
+  Sparkles,
+  Zap,
+  MessageSquare
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,7 +78,7 @@ export function TravelIntelligence({ data, category, isLoading, onUserSpeakingCh
       if (!isInteractiveMode) return;
       
       const contextText = showAlt && altPerspective ? altPerspective.altSummary : (data?.summary || "General news information");
-      setStatusMessage("Processing your question...");
+      setStatusMessage("Dharma Navigator thinking...");
       
       const reader = new FileReader();
       reader.onloadend = async () => {
@@ -196,35 +198,56 @@ export function TravelIntelligence({ data, category, isLoading, onUserSpeakingCh
     <div className="space-y-6">
       <audio ref={audioRef} onEnded={() => setIsAiTalking(false)} className="hidden" />
 
-      {/* Voice Control Hub - Always Visible */}
-      <div className="p-6 rounded-3xl glass-dark border-primary/20 text-white flex flex-col items-center gap-4 animate-in fade-in duration-700">
+      {/* Voice Control Hub */}
+      <div className="p-8 rounded-[2.5rem] glass-dark border-primary/20 text-white flex flex-col items-center gap-6 animate-in fade-in duration-700 relative overflow-hidden group">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+        
         {!isInteractiveMode ? (
-          <Button 
-            onClick={startBriefing}
-            disabled={isLoading}
-            className="w-full h-14 rounded-2xl bg-secondary text-primary font-bold gap-3 shadow-[0_0_20px_rgba(180,148,94,0.3)] hover:scale-[1.02] transition-all"
-          >
-            {isLoading ? (
-              <Loader2 className="animate-spin" size={20} />
-            ) : (
-              <Play size={20} fill="currentColor" />
-            )}
-            <span className="text-lg">Start Voice Briefing</span>
-          </Button>
-        ) : (
-          <div className="flex flex-col items-center gap-3">
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-500 ${
-              isSpeaking 
-                ? 'bg-secondary ring-[12px] ring-secondary/30 scale-110' 
-                : isAiTalking 
-                  ? 'bg-primary animate-pulse ring-4 ring-primary/20' 
-                  : 'bg-muted/20'
-            }`}>
-              {isSpeaking ? <Mic className="text-primary-foreground" size={32} /> : <Volume2 className="text-primary-foreground" size={32} />}
+          <>
+            <Button 
+              onClick={startBriefing}
+              disabled={isLoading}
+              className="w-full h-16 rounded-2xl bg-secondary text-primary font-bold gap-3 shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:scale-[1.02] active:scale-95 transition-all text-lg"
+            >
+              {isLoading ? (
+                <Loader2 className="animate-spin" size={24} />
+              ) : (
+                <Play size={24} fill="currentColor" />
+              )}
+              Start Voice Briefing
+            </Button>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] text-secondary/60">
+                <Zap size={10} className="text-secondary" /> How to use
+              </div>
+              <p className="text-[11px] text-white/50 font-medium leading-relaxed">
+                Click start, listen, and simply <span className="text-secondary font-bold">speak to interrupt</span> the guide with any question.
+              </p>
             </div>
-            <div className="text-center">
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">{statusMessage}</span>
-              <p className="text-[10px] opacity-60 mt-1 uppercase font-bold tracking-widest">Speak to interrupt the guide</p>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-4 w-full">
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-700 relative ${
+              isSpeaking 
+                ? 'bg-secondary scale-110 shadow-[0_0_50px_rgba(6,182,212,0.6)]' 
+                : isAiTalking 
+                  ? 'bg-primary/40 ring-4 ring-primary/20 animate-pulse' 
+                  : 'bg-white/5'
+            }`}>
+              {isSpeaking ? (
+                <Mic className="text-primary-foreground animate-bounce" size={40} />
+              ) : (
+                <Volume2 className={isAiTalking ? "text-secondary animate-pulse" : "text-white/20"} size={40} />
+              )}
+              {isSpeaking && (
+                <div className="absolute inset-0 rounded-full border-4 border-secondary animate-ping opacity-30" />
+              )}
+            </div>
+            <div className="text-center space-y-1">
+              <span className="text-sm font-bold uppercase tracking-[0.2em] text-secondary block">{statusMessage}</span>
+              <p className="text-[10px] opacity-40 uppercase font-bold tracking-widest flex items-center justify-center gap-2">
+                <MessageSquare size={10} /> Speak at any time to ask a question
+              </p>
             </div>
           </div>
         )}
@@ -232,10 +255,10 @@ export function TravelIntelligence({ data, category, isLoading, onUserSpeakingCh
 
       {isLoading ? (
         <div className="space-y-4">
-          <Skeleton className="h-40 w-full rounded-2xl bg-primary/5" />
+          <Skeleton className="h-40 w-full rounded-[2.5rem] bg-primary/5" />
           <div className="grid grid-cols-2 gap-3">
-            <Skeleton className="h-12 bg-primary/5 rounded-xl" />
-            <Skeleton className="h-12 bg-primary/5 rounded-xl" />
+            <Skeleton className="h-12 bg-primary/5 rounded-2xl" />
+            <Skeleton className="h-12 bg-primary/5 rounded-2xl" />
           </div>
         </div>
       ) : data ? (
@@ -244,26 +267,28 @@ export function TravelIntelligence({ data, category, isLoading, onUserSpeakingCh
             <h2 className="text-2xl font-headline font-bold text-primary flex items-center gap-2">
               <Map className="text-secondary" /> {data.country || "Global"} Insights
             </h2>
-            <Badge variant="outline" className="text-[10px] font-bold tracking-widest uppercase border-primary/20">
+            <Badge variant="outline" className="text-[10px] font-bold tracking-widest uppercase border-primary/20 rounded-full px-3">
               {data.sourceRegion} Feed
             </Badge>
           </div>
 
-          <div className="p-5 rounded-2xl glass border-primary/10 space-y-4 relative overflow-hidden">
+          <div className="p-6 rounded-[2.5rem] glass border-primary/10 space-y-6 relative overflow-hidden group">
+             <div className="absolute -right-20 -bottom-20 w-40 h-40 bg-secondary/5 rounded-full blur-3xl group-hover:bg-secondary/10 transition-colors" />
+            
             <div className={`transition-all duration-500 ${showAlt ? "opacity-0 invisible h-0" : "opacity-100 visible"}`}>
-              <div className="text-primary font-medium leading-relaxed">
+              <div className="text-primary/80 font-medium leading-relaxed text-lg">
                 {renderTextWithElif(data.summary, data.complexTerms)}
               </div>
             </div>
             
             {altPerspective && (
               <div className={`transition-all duration-500 ${showAlt ? "opacity-100 visible" : "opacity-0 invisible h-0"}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground text-[10px]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground text-[10px] rounded-full">
                     {altPerspective.altRegion} Perspective
                   </Badge>
                 </div>
-                <div className="text-primary font-medium leading-relaxed italic">
+                <div className="text-primary/70 font-medium leading-relaxed italic text-lg border-l-4 border-secondary/20 pl-6">
                   {renderTextWithElif(altPerspective.altSummary, altPerspective.complexTerms)}
                 </div>
               </div>
@@ -274,27 +299,31 @@ export function TravelIntelligence({ data, category, isLoading, onUserSpeakingCh
               size="sm" 
               onClick={handleTogglePerspective}
               disabled={isLoadingAlt}
-              className="w-full mt-2 border border-primary/5 hover:bg-primary/5 text-primary/60 hover:text-primary gap-2 h-10 text-xs font-bold uppercase tracking-tighter"
+              className="w-full mt-2 border border-primary/5 hover:bg-primary/5 text-primary/40 hover:text-primary gap-3 h-12 text-xs font-bold uppercase tracking-widest rounded-2xl transition-all"
             >
               {isLoadingAlt ? (
-                <Loader2 size={14} className="animate-spin" />
+                <Loader2 size={16} className="animate-spin" />
               ) : showAlt ? (
-                <><Layers size={14} /> Back to Primary News</>
+                <><Layers size={16} /> Restore Primary News</>
               ) : (
-                <><ArrowLeftRight size={14} /> See Other Perspective</>
+                <><ArrowLeftRight size={16} /> Switch Global Perspective</>
               )}
             </Button>
             
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-2 gap-4 pt-2">
               {data.weather && (
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-100 flex items-center gap-2">
-                  <Sun size={18} className="text-amber-600" />
+                <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100/50 flex items-center gap-3 group/item">
+                  <div className="p-2 bg-amber-100 rounded-xl group-hover/item:rotate-12 transition-transform">
+                    <Sun size={20} className="text-amber-600" />
+                  </div>
                   <span className="text-sm font-bold text-amber-900">{data.weather}</span>
                 </div>
               )}
               {data.currency && (
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-2">
-                  <Coins size={18} className="text-emerald-600" />
+                <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100/50 flex items-center gap-3 group/item">
+                   <div className="p-2 bg-emerald-100 rounded-xl group-hover/item:rotate-12 transition-transform">
+                    <Coins size={20} className="text-emerald-600" />
+                  </div>
                   <span className="text-sm font-bold text-emerald-900">{data.currency}</span>
                 </div>
               )}
@@ -305,22 +334,22 @@ export function TravelIntelligence({ data, category, isLoading, onUserSpeakingCh
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-headline font-bold text-primary flex items-center gap-2">
-              <Sparkles className="text-secondary" /> Trending Intelligence
+              <Sparkles className="text-secondary" /> Daily Intelligence
             </h2>
           </div>
-          <div className="grid gap-3">
+          <div className="grid gap-4">
             {DEFAULT_INTELLIGENCE.map((item, idx) => (
-              <div key={idx} className="p-4 rounded-2xl glass hover:bg-white/50 transition-all border-transparent hover:border-primary/10 group cursor-pointer">
+              <div key={idx} className="p-5 rounded-[2rem] glass hover:bg-white/80 transition-all border-transparent hover:border-primary/10 group cursor-pointer shadow-sm hover:shadow-xl">
                 <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-xl bg-primary/5 text-primary">
-                    <item.icon size={18} />
+                  <div className="p-3 rounded-2xl bg-primary/5 text-primary group-hover:scale-110 transition-transform">
+                    <item.icon size={22} />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase">{item.category}</span>
-                      <Badge variant="secondary" className={`text-[8px] h-4 ${item.color}`}>{item.status}</Badge>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{item.category}</span>
+                      <Badge variant="secondary" className={`text-[9px] h-5 rounded-full px-2 ${item.color}`}>{item.status}</Badge>
                     </div>
-                    <p className="text-sm font-medium text-primary leading-tight group-hover:translate-x-1 transition-transform">{item.title}</p>
+                    <p className="text-base font-bold text-primary leading-tight group-hover:translate-x-1 transition-transform">{item.title}</p>
                   </div>
                 </div>
               </div>

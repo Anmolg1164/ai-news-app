@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for handling interactive voice questions about news.
@@ -47,7 +48,7 @@ const voiceChatFlow = ai.defineFlow(
 
     // 2. Convert response to Audio
     const { media } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-preview-tts'),
+      model: googleAI.model('googleai/gemini-2.5-flash-preview-tts'),
       config: {
         responseModalities: ['AUDIO'],
         speechConfig: {
@@ -59,8 +60,12 @@ const voiceChatFlow = ai.defineFlow(
       prompt: textResponse,
     });
 
+    if (!media) {
+      throw new Error('Failed to generate audio response');
+    }
+
     const audioBuffer = Buffer.from(
-      media!.url.substring(media!.url.indexOf(',') + 1),
+      media.url.substring(media.url.indexOf(',') + 1),
       'base64'
     );
 
