@@ -22,6 +22,7 @@ const ttsFlow = ai.defineFlow(
     outputSchema: TTSOutputSchema,
   },
   async (text) => {
+    // User provided ElevenLabs Key
     const ELEVEN_LABS_API_KEY = "sk_734d6eecd2ff229e590cb3021999594880ac4bbb697ef343";
     const VOICE_ID = "pNInz6obpgnuMvoYeSOf"; // Professional Voice (Brian)
 
@@ -46,7 +47,8 @@ const ttsFlow = ai.defineFlow(
       );
 
       if (!response.ok) {
-        throw new Error(`ElevenLabs API error: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`ElevenLabs API error: ${response.statusText} ${JSON.stringify(errorData)}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();

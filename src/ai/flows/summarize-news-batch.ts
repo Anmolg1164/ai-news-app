@@ -27,14 +27,14 @@ const summarizeNewsBatchPrompt = ai.definePrompt({
   name: 'summarizeNewsBatchPrompt',
   input: { schema: SummarizeNewsBatchInputSchema },
   output: { schema: SummarizeNewsBatchOutputSchema },
-  prompt: `You are a professional radio news anchor. 
+  prompt: `You are a professional radio news anchor for G newsMola. 
   Summarize the following {{articles.length}} news articles into a concise "bullet headline" briefing.
   
   Instructions:
-  1. Start with a warm greeting like "Here is your G newsMola briefing."
-  2. For each important story, provide a single, snappy 1-sentence headline.
-  3. Use bullet points in text, but ensure the flow is natural for text-to-speech.
-  4. End with "That's the latest for now."
+  1. Start with: "Greetings. Here is your G newsMola briefing."
+  2. For each story, provide a single, snappy 1-sentence headline.
+  3. Ensure the flow is natural for text-to-speech.
+  4. End with: "That is the latest for now. Stay informed."
 
   Articles:
   {{#each articles}}
@@ -50,7 +50,29 @@ const summarizeNewsBatchFlow = ai.defineFlow(
     outputSchema: SummarizeNewsBatchOutputSchema,
   },
   async (input) => {
-    const { output } = await summarizeNewsBatchPrompt(input);
-    return output!;
+    let retries = 0;
+    const maxRetries = 4;
+    
+    while (retries < maxRetries) {
+      try {
+        const { output } = await summarizeNewsBatchPrompt(input);
+        if (!output) throw new Error('Empty summary response');
+        return output;
+      } catch (error: any) {
+        const isRateLimit = 
+          error.message?.includes('429') || 
+          error.status === 429 || 
+          error.message?.includes('RESOURCE_EXHAUSTED');
+
+        if (isRateLimit && retries < maxRetries - 1) {
+          retries++;
+          const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new Error('AI Briefing service busy. Please try again in a few moments.');
   }
 );

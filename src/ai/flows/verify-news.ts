@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for verifying news claims using Serper API and Gemini analysis.
+ * @fileOverview A Genkit flow for verifying news claims using Serper News API and Gemini analysis.
  */
 
 import { ai } from '@/ai/genkit';
@@ -24,7 +24,7 @@ export type VerifyNewsOutput = z.infer<typeof VerifyNewsOutputSchema>;
 const searchReputableNews = ai.defineTool(
   {
     name: 'searchReputableNews',
-    description: 'Search for a headline specifically on reputable news domains.',
+    description: 'Search for a headline specifically on reputable news domains via Serper News API.',
     inputSchema: z.object({ query: z.string() }),
     outputSchema: z.string(),
   },
@@ -33,7 +33,7 @@ const searchReputableNews = ai.defineTool(
     const domains = "site:reuters.com OR site:bbc.com OR site:apnews.com OR site:nytimes.com OR site:aljazeera.com";
     
     try {
-      const response = await fetch("https://google.serper.dev/search", {
+      const response = await fetch("https://google.serper.dev/news", {
         method: "POST",
         headers: {
           "X-API-KEY": SERPER_API_KEY,
@@ -45,7 +45,7 @@ const searchReputableNews = ai.defineTool(
         }),
       });
       const data = await response.json();
-      return JSON.stringify(data.organic || []);
+      return JSON.stringify(data.news || data.organic || []);
     } catch (e) {
       return JSON.stringify({ error: "Serper search failed." });
     }
@@ -61,17 +61,18 @@ const verifyNewsPrompt = ai.definePrompt({
   input: { schema: VerifyNewsInputSchema },
   output: { schema: VerifyNewsOutputSchema },
   tools: [searchReputableNews],
-  prompt: `You are an AI Fact Checker. 
-  Headline: "{{headline}}"
+  prompt: `You are an AI Fact Checker Agent. 
+  Headline to Verify: "{{headline}}"
   
   Instructions:
   1. Use "searchReputableNews" to find matching reports from BBC, Reuters, AP, NYT, or Al Jazeera.
-  2. Analyze the search results:
-     - If all 5 outlets report the same facts, Trust Score is 95-100%.
-     - If 2-3 outlets report it, Trust Score is 60-80%.
-     - If 0 outlets report it, Trust Score is below 30%.
-  3. Extract up to 3 cross-references (Outlet Name and a brief snippet).
-  4. Provide a verdict: "Widely Verified", "Moderately Verified", or "Limited Coverage Found".`,
+  2. Analyze the search results thoroughly.
+  3. Determine the Trust Score:
+     - 90-100%: If multiple reputable outlets report the exact same primary facts.
+     - 60-80%: If only 1-2 outlets report it, or if details are slightly inconsistent.
+     - <40%: If no reputable outlets report the story.
+  4. Extract up to 3 cross-references (Outlet Name and a brief snippet).
+  5. Provide a verdict: "Widely Verified", "Moderately Verified", or "Limited Coverage Found".`,
 });
 
 const verifyNewsFlow = ai.defineFlow(
@@ -81,7 +82,31 @@ const verifyNewsFlow = ai.defineFlow(
     outputSchema: VerifyNewsOutputSchema,
   },
   async (input) => {
-    const { output } = await verifyNewsPrompt(input);
-    return output!;
+    let retries = 0;
+    const maxRetries = 5;
+    
+    while (retries < maxRetries) {
+      try {
+        const { output } = await verifyNewsPrompt(input);
+        if (!output) throw new Error('Empty verification response');
+        return output;
+      } catch (error: any) {
+        const isRateLimit = 
+          error.message?.includes('429') || 
+          error.status === 429 || 
+          error.message?.includes('RESOURCE_EXHAUSTED') ||
+          error.message?.includes('Quota exceeded');
+
+        if (isRateLimit && retries < maxRetries - 1) {
+          retries++;
+          // Exponential backoff: 3s, 6s, 12s...
+          const delay = Math.pow(2, retries) * 1500 + Math.random() * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new Error('Verification service timed out due to high load. Please try again.');
   }
 );
