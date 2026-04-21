@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { Navigation } from "@/components/Navigation";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
-import { MapPin, Search, Bell, ChevronDown, ArrowUp, Languages, User, Settings, Bookmark, LogOut } from "lucide-react";
+import { MapPin, Search, Bell, ChevronDown, ArrowUp, Languages, User, Settings, Bookmark, LogOut, Library } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -44,6 +43,7 @@ export default function Home() {
   const [searchInput, setSearchInput] = useState<string>("");
   const [activeCountry, setActiveCountry] = useState(COUNTRIES[0]);
   const [activeLanguage, setActiveLanguage] = useState(LANGUAGES[0]);
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
@@ -63,6 +63,7 @@ export default function Home() {
     setActiveCategory(category);
     setSearchQuery("");
     setSearchInput("");
+    setShowSavedOnly(false);
     if (newsScrollRef.current) {
       newsScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -72,6 +73,7 @@ export default function Home() {
     if (e.key === 'Enter' && searchInput.trim()) {
       setSearchQuery(searchInput);
       setActiveCategory("Discovery");
+      setShowSavedOnly(false);
       if (newsScrollRef.current) {
         newsScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -84,11 +86,11 @@ export default function Home() {
     }
   };
 
-  const showNotifications = () => {
-    toast({
-      title: "All Caught Up!",
-      description: "You have no new notifications at this time.",
-    });
+  const toggleLibrary = () => {
+    setShowSavedOnly(!showSavedOnly);
+    if (!showSavedOnly) {
+      toast({ title: "Library View", description: "Showing your saved articles." });
+    }
   };
 
   if (!isMounted) return null;
@@ -113,7 +115,7 @@ export default function Home() {
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[7px] uppercase tracking-[0.4em] font-bold text-muted-foreground opacity-60">
-                  Neo Intelligence
+                  Dharma Intelligence
                 </span>
               </div>
             </div>
@@ -179,9 +181,9 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button onClick={showNotifications} className="relative group p-2 rounded-xl hover:bg-white transition-all" suppressHydrationWarning>
-              <Bell size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full border-2 border-white shadow-sm" />
+            <button onClick={toggleLibrary} className={cn("relative group p-2 rounded-xl transition-all", showSavedOnly ? "bg-accent/20" : "hover:bg-white")} suppressHydrationWarning>
+              <Library size={20} className={cn("transition-colors", showSavedOnly ? "text-accent" : "text-muted-foreground group-hover:text-primary")} />
+              {showSavedOnly && <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full border-2 border-white shadow-sm" />}
             </button>
             
             <DropdownMenu>
@@ -198,20 +200,20 @@ export default function Home() {
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="glass border-white/60 min-w-[200px] p-2 rounded-2xl mr-4">
-                <DropdownMenuLabel className="font-headline text-primary font-bold px-4 py-3">Profile Account</DropdownMenuLabel>
+                <DropdownMenuLabel className="font-headline text-primary font-bold px-4 py-3">Founder Profile</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-primary/5" />
                 <DropdownMenuItem className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-primary/5 gap-3">
-                  <User size={18} /> My Profile
+                  <User size={18} /> My Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleLibrary} className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-primary/5 gap-3">
+                  <Bookmark size={18} /> Saved Reports
                 </DropdownMenuItem>
                 <DropdownMenuItem className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-primary/5 gap-3">
-                  <Bookmark size={18} /> Saved Briefs
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-primary/5 gap-3">
-                  <Settings size={18} /> App Settings
+                  <Settings size={18} /> Engine Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-primary/5" />
                 <DropdownMenuItem className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-destructive/5 text-destructive gap-3">
-                  <LogOut size={18} /> Sign Out
+                  <LogOut size={18} /> Shutdown
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -227,17 +229,17 @@ export default function Home() {
             <div className="p-6 rounded-[2.5rem] glass-dark text-white space-y-4 relative overflow-hidden group hover:glow-secondary transition-all duration-500">
               <div className="absolute -top-10 -right-10 w-48 h-48 bg-secondary/30 rounded-full blur-[80px] group-hover:scale-150 transition-all duration-1000" />
               <h3 className="flex items-center gap-3 font-headline font-bold text-xl">
-                Deep Dive
+                Dharma Verified
               </h3>
               <p className="text-sm opacity-80 leading-relaxed font-medium">
                 Browsing <span className="text-secondary font-bold tracking-tight">{activeCountry.name}</span> in <span className="text-secondary font-bold tracking-tight">{activeLanguage.name}</span>.
               </p>
               <button 
-                onClick={() => toast({ title: "Custom Preferences", description: "Coming soon!" })}
+                onClick={toggleLibrary}
                 className="w-full py-4 rounded-2xl bg-secondary text-slate-900 text-xs font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg" 
                 suppressHydrationWarning
               >
-                Set Preferences
+                {showSavedOnly ? "Back to Feed" : "View My Library"}
               </button>
             </div>
           </aside>
@@ -248,6 +250,7 @@ export default function Home() {
               searchQuery={searchQuery}
               country={activeCountry.name} 
               language={activeLanguage.name}
+              showSavedOnly={showSavedOnly}
               onScroll={handleScroll}
               ref={newsScrollRef}
             />
