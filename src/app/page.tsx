@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -95,9 +96,9 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden relative" suppressHydrationWarning>
       <header className="z-40 glass border-b border-white/40 flex-shrink-0" suppressHydrationWarning>
-        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4 group">
-            <div className="w-12 h-12 bg-gradient-to-tr from-primary to-secondary rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-xl shadow-primary/30 group-hover:rotate-6 transition-all duration-500 cursor-pointer relative overflow-hidden">
+        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-gradient-to-tr from-primary to-secondary rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-xl shadow-primary/30 group-hover:rotate-6 transition-all duration-500 cursor-pointer relative overflow-hidden">
                <Image 
                 src="https://picsum.photos/seed/user_profile/400/400" 
                 alt="Logo" 
@@ -107,28 +108,27 @@ export default function Home() {
               />
             </div>
             <div>
-              <h1 className="text-2xl font-headline font-bold text-primary tracking-tighter leading-none">
+              <h1 className="text-xl font-headline font-bold text-primary tracking-tighter leading-none">
                 G newsMola
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[8px] uppercase tracking-[0.4em] font-bold text-muted-foreground opacity-60">
+                <span className="text-[7px] uppercase tracking-[0.4em] font-bold text-muted-foreground opacity-60">
                   Neo Intelligence
                 </span>
-                <div className="h-1 w-1 bg-secondary rounded-full animate-ping" />
               </div>
             </div>
           </div>
           
-          <div className="hidden lg:flex flex-1 max-w-2xl mx-12 gap-4">
+          <div className="hidden lg:flex flex-1 max-w-xl mx-8 gap-4">
             <div className="relative flex-1 group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-all" size={18} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-all" size={16} />
               <input 
                 type="text" 
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                placeholder="What's the vibe in the world?" 
-                className="w-full bg-white/50 border border-primary/10 rounded-[2rem] py-3 pl-12 pr-4 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:bg-white transition-all shadow-sm font-medium text-sm"
+                placeholder="What's the vibe?" 
+                className="w-full bg-white/50 border border-primary/10 rounded-full py-2 pl-10 pr-4 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:bg-white transition-all shadow-sm font-medium text-xs"
                 suppressHydrationWarning
               />
             </div>
@@ -136,18 +136,18 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl border-white/60 bg-white/50 gap-2 h-11 px-4 hover:bg-white shadow-sm transition-all" suppressHydrationWarning>
-                    <MapPin size={16} className="text-secondary" />
-                    <span className="text-xs font-bold tracking-tight">{activeCountry.name}</span>
-                    <ChevronDown size={12} className="opacity-40" />
+                  <Button variant="outline" className="rounded-xl border-white/60 bg-white/50 gap-2 h-9 px-3 hover:bg-white shadow-sm transition-all" suppressHydrationWarning>
+                    <MapPin size={14} className="text-secondary" />
+                    <span className="text-[10px] font-bold tracking-tight">{activeCountry.name}</span>
+                    <ChevronDown size={10} className="opacity-40" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="glass border-white/60 min-w-[180px] p-2 rounded-2xl">
+                <DropdownMenuContent className="glass border-white/60 min-w-[150px] p-1 rounded-xl">
                   {COUNTRIES.map((c) => (
                     <DropdownMenuItem 
                       key={c.code} 
                       onClick={() => setActiveCountry(c)}
-                      className="cursor-pointer font-bold py-2.5 px-4 rounded-xl m-1 hover:bg-primary/5 text-primary"
+                      className="cursor-pointer font-bold py-2 px-3 rounded-lg m-0.5 hover:bg-primary/5 text-primary text-xs"
                     >
                       {c.name}
                     </DropdownMenuItem>
@@ -157,18 +157,18 @@ export default function Home() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl border-white/60 bg-white/50 gap-2 h-11 px-4 hover:bg-white shadow-sm transition-all" suppressHydrationWarning>
-                    <Languages size={16} className="text-accent" />
-                    <span className="text-xs font-bold tracking-tight">{activeLanguage.name}</span>
-                    <ChevronDown size={12} className="opacity-40" />
+                  <Button variant="outline" className="rounded-xl border-white/60 bg-white/50 gap-2 h-9 px-3 hover:bg-white shadow-sm transition-all" suppressHydrationWarning>
+                    <Languages size={14} className="text-accent" />
+                    <span className="text-[10px] font-bold tracking-tight">{activeLanguage.name}</span>
+                    <ChevronDown size={10} className="opacity-40" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="glass border-white/60 min-w-[180px] p-2 rounded-2xl">
+                <DropdownMenuContent className="glass border-white/60 min-w-[150px] p-1 rounded-xl">
                   {LANGUAGES.map((l) => (
                     <DropdownMenuItem 
                       key={l.code} 
                       onClick={() => setActiveLanguage(l)}
-                      className="cursor-pointer font-bold py-2.5 px-4 rounded-xl m-1 hover:bg-accent/5 text-accent"
+                      className="cursor-pointer font-bold py-2 px-3 rounded-lg m-0.5 hover:bg-accent/5 text-accent text-xs"
                     >
                       {l.name}
                     </DropdownMenuItem>
@@ -178,26 +178,26 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button onClick={showNotifications} className="relative group p-2.5 rounded-xl hover:bg-white transition-all" suppressHydrationWarning>
-              <Bell size={22} className="text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-accent rounded-full border-2 border-white shadow-sm" />
+          <div className="flex items-center gap-3">
+            <button onClick={showNotifications} className="relative group p-2 rounded-xl hover:bg-white transition-all" suppressHydrationWarning>
+              <Bell size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full border-2 border-white shadow-sm" />
             </button>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <div className="w-11 h-11 rounded-xl overflow-hidden border-2 border-white shadow-xl cursor-pointer hover:ring-4 hover:ring-primary/10 transition-all hover:scale-105">
+                <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white shadow-xl cursor-pointer hover:ring-4 hover:ring-primary/10 transition-all hover:scale-105">
                   <Image 
                     src="https://picsum.photos/seed/usergenz/200/200" 
                     alt="Profile" 
-                    width={44} 
-                    height={44}
+                    width={36} 
+                    height={36}
                     className="object-cover"
                     data-ai-hint="user avatar"
                   />
                 </div>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="glass border-white/60 min-w-[220px] p-2 rounded-2xl mr-4">
+              <DropdownMenuContent className="glass border-white/60 min-w-[200px] p-2 rounded-2xl mr-4">
                 <DropdownMenuLabel className="font-headline text-primary font-bold px-4 py-3">Profile Account</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-primary/5" />
                 <DropdownMenuItem className="cursor-pointer font-bold py-3 px-4 rounded-xl m-1 hover:bg-primary/5 gap-3">
@@ -220,21 +220,21 @@ export default function Home() {
       </header>
 
       <main className="flex-1 overflow-hidden container mx-auto px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full py-8">
-          <aside className="lg:col-span-4 space-y-8 overflow-y-auto pr-2 custom-scrollbar hidden lg:block animate-in fade-in slide-in-from-left-10 duration-1000">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full py-4">
+          <aside className="lg:col-span-4 space-y-6 overflow-y-auto pr-2 custom-scrollbar hidden lg:block animate-in fade-in slide-in-from-left-10 duration-1000">
             <GitaWisdom />
             
-            <div className="p-8 rounded-[3rem] glass-dark text-white space-y-6 relative overflow-hidden group hover:glow-secondary transition-all duration-500">
+            <div className="p-6 rounded-[2.5rem] glass-dark text-white space-y-4 relative overflow-hidden group hover:glow-secondary transition-all duration-500">
               <div className="absolute -top-10 -right-10 w-48 h-48 bg-secondary/30 rounded-full blur-[80px] group-hover:scale-150 transition-all duration-1000" />
-              <h3 className="flex items-center gap-4 font-headline font-bold text-2xl">
+              <h3 className="flex items-center gap-3 font-headline font-bold text-xl">
                 Deep Dive
               </h3>
-              <p className="text-base opacity-80 leading-relaxed font-medium">
-                Browsing <span className="text-secondary font-bold tracking-tight">{activeCountry.name}</span> articles in <span className="text-secondary font-bold tracking-tight">{activeLanguage.name}</span>.
+              <p className="text-sm opacity-80 leading-relaxed font-medium">
+                Browsing <span className="text-secondary font-bold tracking-tight">{activeCountry.name}</span> in <span className="text-secondary font-bold tracking-tight">{activeLanguage.name}</span>.
               </p>
               <button 
-                onClick={() => toast({ title: "Custom Preferences", description: "Coming soon in the next update!" })}
-                className="w-full py-5 rounded-[1.5rem] bg-secondary text-slate-900 font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg" 
+                onClick={() => toast({ title: "Custom Preferences", description: "Coming soon!" })}
+                className="w-full py-4 rounded-2xl bg-secondary text-slate-900 text-xs font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg" 
                 suppressHydrationWarning
               >
                 Set Preferences
@@ -264,12 +264,12 @@ export default function Home() {
       <button
         onClick={scrollToTop}
         className={cn(
-          "fixed bottom-32 right-12 p-5 rounded-2xl bg-primary text-white shadow-2xl transition-all duration-700 z-50 hover:scale-110 active:scale-90 hover:glow-primary",
+          "fixed bottom-24 right-12 p-4 rounded-xl bg-primary text-white shadow-2xl transition-all duration-700 z-50 hover:scale-110 active:scale-90 hover:glow-primary",
           showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-32 pointer-events-none"
         )}
         suppressHydrationWarning
       >
-        <ArrowUp size={28} />
+        <ArrowUp size={24} />
       </button>
     </div>
   );

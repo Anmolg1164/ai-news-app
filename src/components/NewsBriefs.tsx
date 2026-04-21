@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe, Languages, RefreshCw, Volume2 } from "lucide-react";
+import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe, Languages, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAlternativePerspective, type AlternativePerspectiveOutput } from "@/ai/flows/get-alternative-perspective";
 import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
@@ -137,15 +138,15 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
               {brief.publishedAt || "Live Now"}
             </div>
           </div>
-          <CardTitle className="text-2xl font-headline text-primary font-bold tracking-tighter leading-tight group-hover/card:text-secondary transition-colors duration-500">
+          <CardTitle className="text-xl font-headline text-primary font-bold tracking-tighter leading-tight group-hover/card:text-secondary transition-colors duration-500">
             {currentTitle}
           </CardTitle>
         </CardHeader>
         
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           <div className="relative">
             <div className={cn("transition-all duration-700", showAlt ? "opacity-20 blur-md scale-95" : "opacity-100")}>
-              <p className="text-primary/70 leading-relaxed text-base font-medium">
+              <p className="text-primary/70 leading-relaxed text-sm font-medium">
                 {currentContent}
               </p>
             </div>
@@ -157,14 +158,14 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
                     <div className="p-2 bg-secondary/20 rounded-xl">
                       <Sparkles className="text-secondary" size={18} />
                     </div>
-                    <h4 className="text-sm font-bold text-primary uppercase tracking-widest">Global Pivot</h4>
+                    <h4 className="text-xs font-bold text-primary uppercase tracking-widest">Global Pivot</h4>
                   </div>
                   {isLoading ? (
                     <div className="flex flex-col items-center justify-center h-24 gap-4">
                       <Loader2 size={24} className="animate-spin text-secondary" />
                     </div>
                   ) : (
-                    <p className="text-primary/90 text-sm leading-relaxed italic font-medium">
+                    <p className="text-primary/90 text-xs leading-relaxed italic font-medium">
                       "{altData?.altSummary}"
                     </p>
                   )}
@@ -174,14 +175,14 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
           </div>
         </CardContent>
 
-        <CardFooter className="flex justify-between items-center pt-6 border-t border-primary/5 mx-6 mb-6">
+        <CardFooter className="flex justify-between items-center pt-4 border-t border-primary/5 mx-6 mb-6">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={handleToggle}
-            className={cn("gap-3 h-10 px-6 rounded-full text-xs font-bold uppercase tracking-[0.2em] transition-all", showAlt ? 'bg-secondary text-primary shadow-lg shadow-secondary/20' : 'text-primary/40 hover:bg-primary/5 hover:text-primary')}
+            className={cn("gap-2 h-9 px-4 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all", showAlt ? 'bg-secondary text-primary shadow-lg shadow-secondary/20' : 'text-primary/40 hover:bg-primary/5 hover:text-primary')}
           >
-            <ArrowLeftRight size={16} />
+            <ArrowLeftRight size={14} />
             {showAlt ? "Original" : "Pivot View"}
           </Button>
           {brief.url && brief.url.startsWith('http') && (
@@ -189,9 +190,9 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
               href={brief.url} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="group/link flex items-center gap-2 text-xs font-bold text-primary/40 hover:text-accent uppercase tracking-widest transition-all"
+              className="group/link flex items-center gap-2 text-[10px] font-bold text-primary/40 hover:text-accent uppercase tracking-widest transition-all"
             >
-              Coverage <ExternalLink size={14} className="group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform" />
+              Coverage <ExternalLink size={12} className="group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform" />
             </a>
           )}
         </CardFooter>
@@ -296,7 +297,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       toast({
         variant: "destructive",
         title: "Briefing Failed",
-        description: "AI summarized logic reached its limit. Try again soon.",
+        description: "Quota limit reached. Try again soon.",
       });
     } finally {
       setIsSummarizing(false);
@@ -320,38 +321,38 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-10 duration-1000">
       <audio ref={audioRef} onEnded={() => setIsPlaying(false)} className="hidden" />
       
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-4 py-8 flex-shrink-0 bg-background/40 backdrop-blur-xl z-20">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-            <Globe size={28} className="animate-spin-slow" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 py-4 flex-shrink-0 bg-background/40 backdrop-blur-xl z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <Globe size={20} className="animate-spin-slow" />
           </div>
           <div>
-            <h2 className="text-4xl font-headline font-bold text-primary tracking-tighter">
+            <h2 className="text-xl font-headline font-bold text-primary tracking-tighter">
               {searchQuery ? `"${searchQuery}"` : `${category} Feed`}
             </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <div className={cn("h-2 w-2 rounded-full", isPlaying ? "bg-accent animate-ping" : "bg-secondary animate-pulse")} />
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                {isPlaying ? "AI is Reading Briefing" : `Live Updates for ${country}`}
+            <div className="flex items-center gap-2">
+              <div className={cn("h-1.5 w-1.5 rounded-full", isPlaying ? "bg-accent animate-ping" : "bg-secondary animate-pulse")} />
+              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+                {isPlaying ? "AI Reading Briefing" : country}
               </span>
             </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Button 
             onClick={handleSummarizeAndAnnounce}
             disabled={isSummarizing || isPlaying || loading}
-            className="rounded-2xl bg-gradient-to-r from-primary to-secondary text-white hover:scale-105 active:scale-95 transition-all gap-3 h-14 px-8 shadow-xl shadow-primary/20"
+            className="rounded-xl bg-gradient-to-r from-primary to-secondary text-white hover:scale-105 active:scale-95 transition-all gap-2 h-10 px-6 shadow-lg shadow-primary/10"
           >
             {isSummarizing ? (
-              <Loader2 className="animate-spin" size={20} />
+              <Loader2 className="animate-spin" size={16} />
             ) : isPlaying ? (
-              <Volume2 className="animate-pulse" size={20} />
+              <Volume2 className="animate-pulse" size={16} />
             ) : (
-              <Sparkles size={20} />
+              <Sparkles size={16} />
             )}
-            <span className="text-sm font-bold uppercase tracking-tight">
+            <span className="text-xs font-bold uppercase tracking-tight">
               {isSummarizing ? "Synthesizing..." : isPlaying ? "Reading..." : "AI Insights"}
             </span>
           </Button>
@@ -361,12 +362,12 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       <div 
         ref={ref}
         onScroll={onScroll}
-        className="flex-1 overflow-y-auto custom-scrollbar px-2 space-y-10 pb-48 pt-4"
+        className="flex-1 overflow-y-auto custom-scrollbar px-2 space-y-8 pb-32 pt-2"
       >
         {loading ? (
-          <div className="space-y-10">
+          <div className="space-y-8">
             {[1, 2, 3].map(i => (
-              <Skeleton key={i} className="h-64 w-full rounded-[2.5rem] glass" />
+              <Skeleton key={i} className="h-48 w-full rounded-[2.5rem] glass" />
             ))}
           </div>
         ) : briefs.length > 0 ? (
@@ -379,18 +380,18 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
             );
           })
         ) : (
-          <div className="flex flex-col items-center justify-center p-20 glass rounded-[3rem] text-center space-y-6">
-            <div className="p-6 bg-primary/5 rounded-full">
-              <Newspaper className="text-primary/20" size={64} />
+          <div className="flex flex-col items-center justify-center p-12 glass rounded-[3rem] text-center space-y-4">
+            <div className="p-4 bg-primary/5 rounded-full">
+              <Newspaper className="text-primary/20" size={48} />
             </div>
-            <p className="text-primary/40 font-bold uppercase tracking-[0.4em] text-sm">Quiet moment in the world</p>
-            <Button variant="outline" onClick={() => fetchLiveNews(true)} className="rounded-xl">Refresh Feed</Button>
+            <p className="text-primary/40 font-bold uppercase tracking-[0.3em] text-xs">Quiet moment in the world</p>
+            <Button variant="outline" size="sm" onClick={() => fetchLiveNews(true)} className="rounded-lg">Refresh Feed</Button>
           </div>
         )}
 
         {loadingMore && (
-          <div className="flex flex-col items-center justify-center p-12 gap-4">
-            <Loader2 className="animate-spin text-primary" size={40} />
+          <div className="flex flex-col items-center justify-center p-8 gap-2">
+            <Loader2 className="animate-spin text-primary" size={24} />
           </div>
         )}
       </div>
