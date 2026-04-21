@@ -3,12 +3,15 @@
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe, Languages, RefreshCw, Zap } from "lucide-react";
+import { Newspaper, Calendar, ExternalLink, ArrowLeftRight, Loader2, Sparkles, Globe, Languages, RefreshCw, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAlternativePerspective, type AlternativePerspectiveOutput } from "@/ai/flows/get-alternative-perspective";
 import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
 import { searchNews as searchNewsTool } from "@/ai/flows/get-journey-intelligence";
+import { summarizeNewsBatch } from "@/ai/flows/summarize-news-batch";
+import { textToSpeech } from "@/ai/flows/tts-flow";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface NewsBrief {
   id: string;
@@ -67,8 +70,6 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
     setIsTranslating(true);
     setHasError(false);
     
-    await new Promise(resolve => setTimeout(resolve, Math.random() * 800));
-
     try {
       const result = await translateNews({
         title: brief.title,
@@ -79,17 +80,10 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
       setTranslatedData(result);
     } catch (error: any) {
       setHasError(true);
-      if (index === 0) {
-        toast({
-          variant: "destructive",
-          title: "AI Stressed",
-          description: " Gemini is taking a breather. Hit retry in a sec.",
-        });
-      }
     } finally {
       setIsTranslating(false);
     }
-  }, [brief.id, brief.title, brief.content, index, toast]);
+  }, [brief.id, brief.title, brief.content]);
 
   useEffect(() => {
     if (isVisible && language !== "English" && !translatedData && !isTranslating) {
@@ -137,16 +131,6 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
                   <Languages size={12} /> {language.toUpperCase()}
                 </div>
               )}
-              {hasError && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => handleTranslation(language)}
-                  className="h-8 px-3 text-[10px] font-bold text-destructive hover:bg-destructive/5 rounded-full flex items-center gap-2"
-                >
-                  <RefreshCw size={12} /> RETRY
-                </Button>
-              )}
             </div>
             <div className="flex items-center gap-2 text-muted-foreground/60 text-xs font-bold uppercase tracking-tighter">
               <Calendar size={14} />
@@ -160,7 +144,7 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
         
         <CardContent className="space-y-6">
           <div className="relative">
-            <div className={`transition-all duration-700 ${showAlt ? "opacity-20 blur-md scale-95" : "opacity-100"}`}>
+            <div className={cn("transition-all duration-700", showAlt ? "opacity-20 blur-md scale-95" : "opacity-100")}>
               <p className="text-primary/70 leading-relaxed text-base font-medium">
                 {currentContent}
               </p>
@@ -178,7 +162,6 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
                   {isLoading ? (
                     <div className="flex flex-col items-center justify-center h-24 gap-4">
                       <Loader2 size={24} className="animate-spin text-secondary" />
-                      <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary/60">Decoding perspectives</span>
                     </div>
                   ) : (
                     <p className="text-primary/90 text-sm leading-relaxed italic font-medium">
@@ -196,7 +179,7 @@ function NewsBriefCard({ brief, language, index }: { brief: NewsBrief, language:
             variant="ghost" 
             size="sm" 
             onClick={handleToggle}
-            className={`gap-3 h-10 px-6 rounded-full text-xs font-bold uppercase tracking-[0.2em] transition-all ${showAlt ? 'bg-secondary text-primary shadow-lg shadow-secondary/20' : 'text-primary/40 hover:bg-primary/5 hover:text-primary'}`}
+            className={cn("gap-3 h-10 px-6 rounded-full text-xs font-bold uppercase tracking-[0.2em] transition-all", showAlt ? 'bg-secondary text-primary shadow-lg shadow-secondary/20' : 'text-primary/40 hover:bg-primary/5 hover:text-primary')}
           >
             <ArrowLeftRight size={16} />
             {showAlt ? "Original" : "Pivot View"}
@@ -222,7 +205,6 @@ interface NewsBriefsProps {
   searchQuery?: string;
   country: string;
   language: string;
-  onIntelligenceClick?: () => void;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
 }
 
@@ -231,14 +213,17 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
   searchQuery, 
   country, 
   language, 
-  onIntelligenceClick,
   onScroll 
 }, ref) => {
   const [briefs, setBriefs] = useState<NewsBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [nextPage, setNextPage] = useState<string | null>(null);
+  
   const observer = useRef<IntersectionObserver | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
   const fetchLiveNews = useCallback(async (isInitial = true) => {
@@ -277,7 +262,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       toast({
         variant: "destructive",
         title: "Feed Offline",
-        description: "News sources are a bit overwhelmed. Try a fresh category.",
+        description: "News sources are a bit overwhelmed.",
       });
     } finally {
       setLoading(false);
@@ -288,6 +273,35 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
   useEffect(() => {
     fetchLiveNews(true);
   }, [category, country, searchQuery]);
+
+  const handleSummarizeAndAnnounce = async () => {
+    if (briefs.length === 0 || isSummarizing || isPlaying) return;
+    
+    setIsSummarizing(true);
+    try {
+      const topArticles = briefs.slice(0, 10).map(b => ({ title: b.title, content: b.content }));
+      const { summary } = await summarizeNewsBatch({ articles: topArticles });
+      
+      const { media } = await textToSpeech(summary);
+      if (audioRef.current) {
+        audioRef.current.src = media;
+        audioRef.current.play();
+        setIsPlaying(true);
+        toast({
+          title: "Briefing Started",
+          description: "Reading top 10 headlines aloud.",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Briefing Failed",
+        description: "AI summarized logic reached its limit. Try again soon.",
+      });
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
 
   const lastElementRef = useCallback((node: HTMLDivElement) => {
     if (loading || loadingMore) return;
@@ -304,6 +318,8 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
 
   return (
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-10 duration-1000">
+      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} className="hidden" />
+      
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-4 py-8 flex-shrink-0 bg-background/40 backdrop-blur-xl z-20">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
@@ -314,19 +330,30 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
               {searchQuery ? `"${searchQuery}"` : `${category} Feed`}
             </h2>
             <div className="flex items-center gap-2 mt-1">
-              <div className="h-2 w-2 bg-secondary rounded-full animate-pulse" />
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Live Updates for {country}</span>
+              <div className={cn("h-2 w-2 rounded-full", isPlaying ? "bg-accent animate-ping" : "bg-secondary animate-pulse")} />
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                {isPlaying ? "AI is Reading Briefing" : `Live Updates for ${country}`}
+              </span>
             </div>
           </div>
         </div>
         
         <div className="flex items-center gap-4">
           <Button 
-            onClick={onIntelligenceClick} 
+            onClick={handleSummarizeAndAnnounce}
+            disabled={isSummarizing || isPlaying || loading}
             className="rounded-2xl bg-gradient-to-r from-primary to-secondary text-white hover:scale-105 active:scale-95 transition-all gap-3 h-14 px-8 shadow-xl shadow-primary/20"
           >
-            <Sparkles className="animate-pulse" size={20} />
-            <span className="text-sm font-bold uppercase tracking-tight">AI Insights</span>
+            {isSummarizing ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : isPlaying ? (
+              <Volume2 className="animate-pulse" size={20} />
+            ) : (
+              <Sparkles size={20} />
+            )}
+            <span className="text-sm font-bold uppercase tracking-tight">
+              {isSummarizing ? "Synthesizing..." : isPlaying ? "Reading..." : "AI Insights"}
+            </span>
           </Button>
         </div>
       </div>
@@ -364,7 +391,6 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         {loadingMore && (
           <div className="flex flex-col items-center justify-center p-12 gap-4">
             <Loader2 className="animate-spin text-primary" size={40} />
-            <span className="text-[10px] font-bold text-primary/40 uppercase tracking-widest">More intel loading</span>
           </div>
         )}
       </div>

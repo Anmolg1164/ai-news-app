@@ -1,15 +1,11 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { Navigation } from "@/components/Navigation";
-import { TravelIntelligence } from "@/components/TravelIntelligence";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
-import { MapPin, Search, Bell, Sparkles, ChevronDown, ArrowUp, Languages, Zap, User, Settings, Bookmark, LogOut } from "lucide-react";
+import { MapPin, Search, Bell, ChevronDown, ArrowUp, Languages, User, Settings, Bookmark, LogOut } from "lucide-react";
 import Image from "next/image";
-import { getJourneyIntelligence, type JourneyIntelligenceOutput } from "@/ai/flows/get-journey-intelligence";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -42,16 +38,12 @@ const LANGUAGES = [
 ];
 
 export default function Home() {
-  const [intelligenceData, setIntelligenceData] = useState<JourneyIntelligenceOutput | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("World");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchInput, setSearchInput] = useState<string>("");
   const [activeCountry, setActiveCountry] = useState(COUNTRIES[0]);
   const [activeLanguage, setActiveLanguage] = useState(LANGUAGES[0]);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
   
@@ -59,9 +51,6 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => {});
-    }
   }, []);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -85,27 +74,6 @@ export default function Home() {
       if (newsScrollRef.current) {
         newsScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
       }
-    }
-  };
-
-  const triggerIntelligence = async () => {
-    setIsSheetOpen(true);
-    setIsLoading(true);
-    setIntelligenceData(null);
-    try {
-      const context = searchQuery ? `Search query: ${searchQuery}` : `Category: ${activeCategory}`;
-      const result = await getJourneyIntelligence({ 
-        category: `${context} in ${activeCountry.name}` 
-      });
-      setIntelligenceData(result);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "AI Analysis Busy",
-        description: "The agent is handling many requests. Please try again in a moment.",
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -254,18 +222,15 @@ export default function Home() {
       <main className="flex-1 overflow-hidden container mx-auto px-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full py-8">
           <aside className="lg:col-span-4 space-y-8 overflow-y-auto pr-2 custom-scrollbar hidden lg:block animate-in fade-in slide-in-from-left-10 duration-1000">
-            <GitaWisdom isListening={isUserSpeaking} />
+            <GitaWisdom />
             
             <div className="p-8 rounded-[3rem] glass-dark text-white space-y-6 relative overflow-hidden group hover:glow-secondary transition-all duration-500">
               <div className="absolute -top-10 -right-10 w-48 h-48 bg-secondary/30 rounded-full blur-[80px] group-hover:scale-150 transition-all duration-1000" />
-              <div className="flex items-center gap-4 font-headline font-bold text-2xl">
-                <div className="p-2 bg-secondary/20 rounded-xl">
-                  <Sparkles className="text-secondary animate-pulse" />
-                </div>
+              <h3 className="flex items-center gap-4 font-headline font-bold text-2xl">
                 Deep Dive
-              </div>
+              </h3>
               <p className="text-base opacity-80 leading-relaxed font-medium">
-                Switching up the vibe for <span className="text-secondary font-bold tracking-tight">{activeCountry.name}</span> articles in <span className="text-secondary font-bold tracking-tight">{activeLanguage.name}</span>.
+                Browsing <span className="text-secondary font-bold tracking-tight">{activeCountry.name}</span> articles in <span className="text-secondary font-bold tracking-tight">{activeLanguage.name}</span>.
               </p>
               <button 
                 onClick={() => toast({ title: "Custom Preferences", description: "Coming soon in the next update!" })}
@@ -283,7 +248,6 @@ export default function Home() {
               searchQuery={searchQuery}
               country={activeCountry.name} 
               language={activeLanguage.name}
-              onIntelligenceClick={triggerIntelligence}
               onScroll={handleScroll}
               ref={newsScrollRef}
             />
@@ -296,27 +260,6 @@ export default function Home() {
           </section>
         </div>
       </main>
-
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent side="right" className="w-[400px] sm:w-[580px] glass border-l-white/60 overflow-y-auto p-0 rounded-l-[3rem]">
-          <div className="p-10">
-            <SheetHeader className="mb-10">
-              <SheetTitle className="text-4xl font-headline font-bold text-primary flex items-center gap-4">
-                <div className="p-3 bg-secondary/20 rounded-2xl">
-                  <Sparkles className="text-secondary" />
-                </div>
-                AI Agent
-              </SheetTitle>
-            </SheetHeader>
-            <TravelIntelligence 
-              data={intelligenceData} 
-              category={searchQuery ? `Search for ${searchQuery}` : activeCategory} 
-              isLoading={isLoading}
-              onUserSpeakingChange={setIsUserSpeaking}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
 
       <button
         onClick={scrollToTop}
