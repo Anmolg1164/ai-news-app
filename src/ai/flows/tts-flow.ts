@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A Genkit flow for converting text to speech using ElevenLabs API.
@@ -23,6 +22,7 @@ const ttsFlow = ai.defineFlow(
     outputSchema: TTSOutputSchema,
   },
   async (text) => {
+    // API key provided by user
     const ELEVEN_LABS_API_KEY = "sk_734d6eecd2ff229e590cb3021999594880ac4bbb697ef343";
     const VOICE_ID = "pNInz6obpgnuMvoYeSOf"; // Brian (Professional)
 
@@ -37,7 +37,7 @@ const ttsFlow = ai.defineFlow(
           },
           body: JSON.stringify({
             text: text,
-            model_id: "eleven_monolingual_v1",
+            model_id: "eleven_multilingual_v2", // Upgraded to support regional languages
             voice_settings: {
               stability: 0.5,
               similarity_boost: 0.75,
@@ -48,6 +48,7 @@ const ttsFlow = ai.defineFlow(
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error("ElevenLabs Error Details:", errorData);
         if (response.status === 401) throw new Error("ELEVENLABS_API_KEY_INVALID");
         if (response.status === 429) throw new Error("ELEVENLABS_QUOTA_EXCEEDED");
         throw new Error(`ELEVENLABS_ERROR_${response.status}`);
@@ -66,3 +67,31 @@ const ttsFlow = ai.defineFlow(
     }
   }
 );
+
+export async function toWav(
+  pcmData: Buffer,
+  channels = 1,
+  rate = 24000,
+  sampleWidth = 2
+): Promise<string> {
+  const wav = (await import('wav')).default;
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
+    });
+
+    let bufs = [] as any[];
+    writer.on('error', reject);
+    writer.on('data', function (d) {
+      bufs.push(d);
+    });
+    writer.on('end', function () {
+      resolve(Buffer.concat(bufs).toString('base64'));
+    });
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}

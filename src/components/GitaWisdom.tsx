@@ -119,7 +119,10 @@ export function GitaWisdom({ isListening }: GitaWisdomProps) {
 
   const handlePlayAudio = async () => {
     if (isPlaying) return;
+    
+    // Choose the text based on translation
     const textToRead = translation ? translation.translatedVerse : currentVerse.english;
+    
     setIsPlaying(true);
     try {
       const { media } = await textToSpeech(textToRead);
@@ -127,18 +130,24 @@ export function GitaWisdom({ isListening }: GitaWisdomProps) {
         audioRef.current.src = media;
         audioRef.current.play();
       }
-    } catch (error) {
+    } catch (error: any) {
+      setIsPlaying(false); // Reset on error
       toast({
         variant: "destructive",
         title: "Audio Error",
-        description: "Voice synthesis is temporarily unavailable.",
+        description: error.message?.includes('QUOTA') 
+          ? "ElevenLabs quota reached." 
+          : "Voice synthesis is temporarily unavailable.",
       });
-    } finally {
-      setIsPlaying(false);
     }
+    // Note: setIsPlaying(false) happens in onEnded handler
   };
 
   const nextVerse = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    setIsPlaying(false);
     setVerseIndex((prev) => (prev + 1) % verses.length);
     setInterpretation(null);
     setTranslation(null);
@@ -151,7 +160,12 @@ export function GitaWisdom({ isListening }: GitaWisdomProps) {
       "relative group",
       isListening && "ring-4 ring-secondary animate-pulse shadow-[0_0_20px_rgba(180,148,94,0.6)]"
     )}>
-      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} className="hidden" />
+      <audio 
+        ref={audioRef} 
+        onEnded={() => setIsPlaying(false)} 
+        onError={() => setIsPlaying(false)}
+        className="hidden" 
+      />
       
       <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
         <ScrollText size={80} />
@@ -207,7 +221,10 @@ export function GitaWisdom({ isListening }: GitaWisdomProps) {
                 size="icon" 
                 onClick={handlePlayAudio}
                 disabled={isPlaying || isTranslating}
-                className="h-6 w-6 text-[#b4945e] hover:bg-[#eee1c5]"
+                className={cn(
+                  "h-6 w-6 text-[#b4945e] hover:bg-[#eee1c5] transition-all",
+                  isPlaying && "animate-pulse scale-110 text-secondary"
+                )}
               >
                 {isPlaying ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />}
               </Button>
