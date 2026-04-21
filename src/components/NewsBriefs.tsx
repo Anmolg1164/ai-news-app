@@ -232,7 +232,9 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
 }, ref) => {
   const [briefs, setBriefs] = useState<NewsBrief[]>([]);
   const [savedBriefs, setSavedBriefs] = useState<NewsBrief[]>([]);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   
@@ -258,16 +260,29 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     localStorage.setItem("savedNews", JSON.stringify(updated));
   };
 
-  const fetchLiveNews = useCallback(async () => {
-    setLoading(true);
+  const fetchLiveNews = useCallback(async (pageToken?: string) => {
+    if (pageToken) {
+      setIsLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const query = searchQuery ? searchQuery : `${category} news in ${country}`;
-      const rawResults = await searchNewsTool({ query });
+      const rawResults = await searchNewsTool({ query, page: pageToken });
       const parsed = JSON.parse(rawResults);
-      if (parsed.error) throw new Error(parsed.error);
+      
+      if (parsed.error) {
+        if (parsed.error.includes("credit") || parsed.error.includes("429")) {
+          toast({ variant: "destructive", title: "API Quota Reached", description: "Daily NewsData.io credits exhausted. Please try again tomorrow." });
+        } else {
+          throw new Error(parsed.error);
+        }
+        return;
+      }
 
       const newBriefs = (parsed.results || []).map((r: any, idx: number) => ({
-        id: r.link || `news-${idx}-${Date.now()}`,
+        id: r.link || `news-${idx}-${Date.now()}-${Math.random()}`,
         title: r.title || "Latest Headline",
         content: r.description || r.content || "Context loading from sources...",
         url: r.link,
@@ -275,17 +290,38 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         publishedAt: r.pubDate ? new Date(r.pubDate).toLocaleDateString() : "Just Now"
       }));
 
-      setBriefs(newBriefs);
+      if (pageToken) {
+        setBriefs(prev => [...prev, ...newBriefs]);
+      } else {
+        setBriefs(newBriefs);
+      }
+      setNextPageToken(parsed.nextPage || null);
     } catch (error) {
-      toast({ variant: "destructive", title: "Feed Offline", description: "Sources are busy." });
+      toast({ variant: "destructive", title: "Feed Offline", description: "Sources are busy. Check your connection or API keys." });
     } finally {
       setLoading(false);
+      setIsLoadingMore(false);
     }
   }, [category, country, searchQuery, toast]);
 
   useEffect(() => {
-    if (!showSavedOnly) fetchLiveNews();
+    if (!showSavedOnly) {
+      setBriefs([]);
+      setNextPageToken(null);
+      fetchLiveNews();
+    }
   }, [category, country, searchQuery, showSavedOnly, fetchLiveNews]);
+
+  const handleInternalScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (onScroll) onScroll(e);
+
+    if (showSavedOnly || loading || isLoadingMore || !nextPageToken) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop <= clientHeight + 500) {
+      fetchLiveNews(nextPageToken);
+    }
+  };
 
   const handleSummarizeAndAnnounce = async () => {
     const list = showSavedOnly ? savedBriefs : briefs;
@@ -347,8 +383,8 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         </Button>
       </div>
       
-      <div ref={ref} onScroll={onScroll} className="flex-1 overflow-y-auto custom-scrollbar px-3 pt-4 pb-32">
-        {loading && !showSavedOnly ? (
+      <div ref={ref} onScroll={handleInternalScroll} className="flex-1 overflow-y-auto custom-scrollbar px-3 pt-4 pb-32">
+        {loading && !showSavedOnly && briefs.length === 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-40 w-full rounded-[2rem] glass" />)}
           </div>
@@ -363,6 +399,12 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
                 isSaved={savedBriefs.some(b => b.id === brief.id)}
               />
             ))}
+            {isLoadingMore && (
+              <>
+                <Skeleton className="h-40 w-full rounded-[2rem] glass" />
+                <Skeleton className="h-40 w-full rounded-[2rem] glass" />
+              </>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-8 glass rounded-[2rem] text-center space-y-3">
