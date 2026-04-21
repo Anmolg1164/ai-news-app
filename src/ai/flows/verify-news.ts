@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for verifying news claims using Serper News API and Gemini analysis.
@@ -44,10 +45,16 @@ const searchReputableNews = ai.defineTool(
           num: 5
         }),
       });
+
+      if (!response.ok) {
+        if (response.status === 403) return JSON.stringify({ error: "SERPER_AUTH_ERROR" });
+        return JSON.stringify({ error: `SERPER_HTTP_${response.status}` });
+      }
+
       const data = await response.json();
       return JSON.stringify(data.news || data.organic || []);
     } catch (e) {
-      return JSON.stringify({ error: "Serper search failed." });
+      return JSON.stringify({ error: "SERPER_CONNECTION_FAILED" });
     }
   }
 );
@@ -88,25 +95,23 @@ const verifyNewsFlow = ai.defineFlow(
     while (retries < maxRetries) {
       try {
         const { output } = await verifyNewsPrompt(input);
-        if (!output) throw new Error('Empty verification response');
+        if (!output) throw new Error('GEMINI_EMPTY_RESPONSE');
         return output;
       } catch (error: any) {
-        const isRateLimit = 
-          error.message?.includes('429') || 
-          error.status === 429 || 
-          error.message?.includes('RESOURCE_EXHAUSTED') ||
-          error.message?.includes('Quota exceeded');
+        const msg = error.message?.toLowerCase() || "";
+        const isRateLimit = msg.includes('429') || msg.includes('resource_exhausted') || msg.includes('quota');
 
         if (isRateLimit && retries < maxRetries - 1) {
           retries++;
-          // Exponential backoff: 3s, 6s, 12s...
-          const delay = Math.pow(2, retries) * 1500 + Math.random() * 1000;
+          const delay = Math.pow(2, retries) * 2000 + Math.random() * 1000;
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
-        throw error;
+        
+        if (msg.includes('serper_auth')) throw new Error('SERPER_API_KEY_INVALID');
+        throw new Error(isRateLimit ? 'GEMINI_QUOTA_EXCEEDED' : 'VERIFICATION_FAILED');
       }
     }
-    throw new Error('Verification service timed out due to high load. Please try again.');
+    throw new Error('GEMINI_QUOTA_EXCEEDED');
   }
 );

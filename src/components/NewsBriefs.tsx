@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
@@ -80,7 +81,8 @@ function NewsBriefCard({
       translationCache.current[cacheKey] = result;
       setTranslatedData(result);
     } catch (error: any) {
-      console.error(error);
+      // Silent fail for lazy translation to avoid spamming user
+      console.warn("Lazy translation skipped (Rate limit)");
     } finally {
       setIsTranslating(false);
     }
@@ -88,7 +90,8 @@ function NewsBriefCard({
 
   useEffect(() => {
     if (isVisible && language !== "English" && !translatedData && !isTranslating) {
-      const timer = setTimeout(() => handleTranslation(language), 500);
+      // Longer delay for lazy translation to save RPM for manual actions
+      const timer = setTimeout(() => handleTranslation(language), 1500);
       return () => clearTimeout(timer);
     }
   }, [isVisible, language, translatedData, isTranslating, handleTranslation]);
@@ -99,8 +102,17 @@ function NewsBriefCard({
       try {
         const result = await verifyNews({ headline: brief.title });
         setVerifyData(result);
-      } catch (error) {
-        toast({ variant: "destructive", title: "Verify Busy", description: "Search engines are busy. Try again soon." });
+      } catch (error: any) {
+        let title = "Verification Failed";
+        let desc = "AI service is currently busy.";
+        
+        if (error.message.includes('GEMINI_QUOTA')) {
+          desc = "Gemini API limit reached. Wait 60 seconds.";
+        } else if (error.message.includes('SERPER')) {
+          desc = "Search engine key issue. Please check config.";
+        }
+
+        toast({ variant: "destructive", title, description: desc });
       } finally {
         setIsLoading(false);
       }
@@ -153,7 +165,7 @@ function NewsBriefCard({
                 {isLoading ? (
                   <div className="flex-1 flex flex-col items-center justify-center gap-2">
                     <Loader2 size={24} className="animate-spin text-secondary" />
-                    <span className="text-[10px] font-bold text-primary animate-pulse">AGENTIC VERIFICATION IN PROGRESS</span>
+                    <span className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-[0.2em]">Agentic Fact-Check</span>
                   </div>
                 ) : verifyData ? (
                   <div className="space-y-4">
@@ -337,10 +349,16 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         audioRef.current.src = media;
         audioRef.current.play();
         setIsPlaying(true);
-        toast({ title: "Briefing Started", description: "Reading top 10 headlines via ElevenLabs." });
+        toast({ title: "Briefing Started", description: "Voice: Brian (Premium ElevenLabs)" });
       }
-    } catch (error) {
-      toast({ variant: "destructive", title: "Briefing Failed", description: "API busy." });
+    } catch (error: any) {
+      let desc = "AI service busy.";
+      if (error.message.includes('ELEVENLABS')) {
+        desc = "ElevenLabs quota exceeded or key invalid.";
+      } else if (error.message.includes('GEMINI')) {
+        desc = "Gemini API busy. Wait 60 seconds.";
+      }
+      toast({ variant: "destructive", title: "Briefing Failed", description: desc });
     } finally {
       setIsSummarizing(false);
     }
@@ -364,7 +382,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
             <div className="flex items-center gap-1.5">
               <div className={cn("h-1 w-1 rounded-full", isPlaying ? "bg-accent animate-ping" : "bg-secondary animate-pulse")} />
               <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">
-                {isPlaying ? "Premium Audio" : country}
+                {isPlaying ? "Live Briefing" : country}
               </span>
             </div>
           </div>
@@ -378,7 +396,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         >
           {isSummarizing ? <Loader2 className="animate-spin" size={14} /> : isPlaying ? <Volume2 className="animate-pulse" size={14} /> : <Sparkles size={14} />}
           <span className="text-[10px] font-bold uppercase tracking-tight">
-            {isSummarizing ? "Synthesizing" : isPlaying ? "Reading" : "AI Insights"}
+            {isSummarizing ? "Thinking" : isPlaying ? "Reading" : "AI Insights"}
           </span>
         </Button>
       </div>

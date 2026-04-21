@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for converting text to speech using ElevenLabs API.
@@ -22,9 +23,8 @@ const ttsFlow = ai.defineFlow(
     outputSchema: TTSOutputSchema,
   },
   async (text) => {
-    // User provided ElevenLabs Key
     const ELEVEN_LABS_API_KEY = "sk_734d6eecd2ff229e590cb3021999594880ac4bbb697ef343";
-    const VOICE_ID = "pNInz6obpgnuMvoYeSOf"; // Professional Voice (Brian)
+    const VOICE_ID = "pNInz6obpgnuMvoYeSOf"; // Brian (Professional)
 
     try {
       const response = await fetch(
@@ -48,7 +48,9 @@ const ttsFlow = ai.defineFlow(
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`ElevenLabs API error: ${response.statusText} ${JSON.stringify(errorData)}`);
+        if (response.status === 401) throw new Error("ELEVENLABS_API_KEY_INVALID");
+        if (response.status === 429) throw new Error("ELEVENLABS_QUOTA_EXCEEDED");
+        throw new Error(`ELEVENLABS_ERROR_${response.status}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
@@ -58,8 +60,8 @@ const ttsFlow = ai.defineFlow(
       return {
         media: `data:audio/mpeg;base64,${base64Audio}`,
       };
-    } catch (error) {
-      console.error("ElevenLabs TTS failed:", error);
+    } catch (error: any) {
+      console.error("ElevenLabs TTS failed:", error.message);
       throw error;
     }
   }
