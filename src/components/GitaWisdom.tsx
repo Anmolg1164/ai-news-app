@@ -66,6 +66,12 @@ export function GitaWisdom() {
     setIsPlaying(false);
   };
 
+  useEffect(() => {
+    const handleGlobalStop = () => stopAudio();
+    window.addEventListener('stop-all-audio', handleGlobalStop);
+    return () => window.removeEventListener('stop-all-audio', handleGlobalStop);
+  }, []);
+
   const handleInterpret = async () => {
     if (loading) return;
     setLoading(true);
@@ -156,21 +162,14 @@ export function GitaWisdom() {
   };
 
   const nextVerse = () => {
-    stopAudio();
+    if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
+      (window as any).stopAllAudio();
+    }
     setVerseIndex((prev) => (prev + 1) % verses.length);
     setInterpretation(null);
     setTranslation(null);
     setSelectedLanguage("English");
   };
-
-  // Register global stop function
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).stopAllAudio = () => {
-        stopAudio();
-      };
-    }
-  }, []);
 
   return (
     <Card className={cn(

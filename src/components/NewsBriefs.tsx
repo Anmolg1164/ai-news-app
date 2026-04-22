@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, ExternalLink, ShieldCheck, Loader2, Sparkles, Globe, Languages, Volume2, Bookmark, BookmarkCheck, Square } from "lucide-react";
+import { Newspaper, ExternalLink, ShieldCheck, Loader2, Sparkles, Globe, Volume2, Bookmark, BookmarkCheck, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { verifyNews, type VerifyNewsOutput } from "@/ai/flows/verify-news";
 import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
@@ -99,6 +99,12 @@ function NewsBriefCard({
     }
     setIsPlaying(false);
   };
+
+  useEffect(() => {
+    const handleGlobalStop = () => stopAudio();
+    window.addEventListener('stop-all-audio', handleGlobalStop);
+    return () => window.removeEventListener('stop-all-audio', handleGlobalStop);
+  }, []);
 
   const handlePlayAudio = async () => {
     if (isPlaying) {
@@ -270,6 +276,16 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
   useEffect(() => {
     const saved = localStorage.getItem("savedNews");
     if (saved) setSavedBriefs(JSON.parse(saved));
+    
+    const handleGlobalStop = () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      setIsPlaying(false);
+    };
+    window.addEventListener('stop-all-audio', handleGlobalStop);
+    return () => window.removeEventListener('stop-all-audio', handleGlobalStop);
   }, []);
 
   const handleSave = (brief: NewsBrief) => {
@@ -280,17 +296,11 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     toast({ title: isAlreadySaved ? "Removed" : "Saved", description: isAlreadySaved ? "Article removed." : "Added to library." });
   };
 
-  const stopGlobalAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    setIsPlaying(false);
-  };
-
   const handleSummarizeAndAnnounce = async () => {
     if (isPlaying) {
-      stopGlobalAudio();
+      if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
+        (window as any).stopAllAudio();
+      }
       return;
     }
 

@@ -4,6 +4,7 @@
  * 
  * - Charon: Mapped to Algenib (Informative/Analytical)
  * - Vindemiatrix: Mapped to Pherkad (Gentle/Serene)
+ * - Configured with Indian English accent tags.
  */
 
 import { ai } from '@/ai/genkit';
@@ -38,11 +39,16 @@ const ttsFlow = ai.defineFlow(
     // Mapping personas to Gemini voices
     const voiceName = input.voice === 'Vindemiatrix' ? 'Pherkad' : 'Algenib';
     
-    // Constructing the stylized prompt based on the requested persona
-    let finalPrompt = input.text;
-    if (input.style === 'professional') finalPrompt = `[professional] ${input.text}`;
-    if (input.style === 'analytical') finalPrompt = `[analytical] ${input.text}`;
-    if (input.style === 'serene') finalPrompt = `[serene] [slow] ${input.text}`;
+    // Constructing the stylized prompt with Indian English accent configuration
+    let finalPrompt = `[Indian English accent] ${input.text}`;
+    
+    if (input.style === 'professional') {
+      finalPrompt = `[professional] [Indian English accent] ${input.text}`;
+    } else if (input.style === 'analytical') {
+      finalPrompt = `[analytical] [Indian English accent] ${input.text}`;
+    } else if (input.style === 'serene') {
+      finalPrompt = `[serene] [slow] [Indian English accent] ${input.text}`;
+    }
 
     const { media } = await ai.generate({
       model: googleAI.model('gemini-2.5-flash-preview-tts'),

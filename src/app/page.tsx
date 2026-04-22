@@ -52,6 +52,18 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
+    // Register global stopAllAudio function
+    if (typeof window !== 'undefined') {
+      (window as any).stopAllAudio = () => {
+        const audios = document.querySelectorAll('audio');
+        audios.forEach(audio => {
+          audio.pause();
+          audio.currentTime = 0;
+        });
+        // Dispatch an event so components can update their isPlaying states
+        window.dispatchEvent(new CustomEvent('stop-all-audio'));
+      };
+    }
   }, []);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {

@@ -1,7 +1,7 @@
-
 'use server';
 /**
  * @fileOverview A Genkit flow for handling interactive voice questions about news.
+ * Configured with Indian English accent for responses.
  */
 
 import { ai } from '@/ai/genkit';
@@ -46,7 +46,7 @@ const voiceChatFlow = ai.defineFlow(
 
     const textResponse = response.text;
 
-    // 2. Convert response to Audio
+    // 2. Convert response to Audio with Indian English accent
     const { media } = await ai.generate({
       model: googleAI.model('googleai/gemini-2.5-flash-preview-tts'),
       config: {
@@ -57,7 +57,7 @@ const voiceChatFlow = ai.defineFlow(
           },
         },
       },
-      prompt: textResponse,
+      prompt: `[Indian English accent] ${textResponse}`,
     });
 
     if (!media) {
