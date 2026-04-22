@@ -5,6 +5,7 @@
  * - Charon: Mapped to Algenib (Informative/Analytical)
  * - Vindemiatrix: Mapped to Pherkad (Gentle/Serene)
  * - Configured with Indian English accent tags.
+ * - Includes robust retry logic for 429 (Rate Limit) errors.
  */
 
 import { ai } from '@/ai/genkit';
@@ -50,34 +51,59 @@ const ttsFlow = ai.defineFlow(
       finalPrompt = `[serene] [slow] [Indian English accent] ${input.text}`;
     }
 
-    const { media } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-preview-tts'),
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName },
+    let retries = 0;
+    const maxRetries = 5;
+    
+    while (retries < maxRetries) {
+      try {
+        const { media } = await ai.generate({
+          model: googleAI.model('gemini-2.5-flash-preview-tts'),
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName },
+              },
+            },
           },
-        },
-      },
-      prompt: finalPrompt,
-    });
+          prompt: finalPrompt,
+        });
 
-    if (!media) {
-      throw new Error('GEMINI_TTS_FAILED');
+        if (!media) {
+          throw new Error('GEMINI_TTS_EMPTY_RESPONSE');
+        }
+
+        const audioBuffer = Buffer.from(
+          media.url.substring(media.url.indexOf(',') + 1),
+          'base64'
+        );
+
+        // Convert PCM to WAV for browser compatibility
+        const wavData = await toWav(audioBuffer);
+
+        return {
+          media: `data:audio/wav;base64,${wavData}`,
+        };
+      } catch (error: any) {
+        const msg = error.message?.toLowerCase() || "";
+        const isRateLimit = 
+          msg.includes('429') || 
+          msg.includes('resource_exhausted') || 
+          msg.includes('quota') || 
+          error.status === 429;
+
+        if (isRateLimit && retries < maxRetries - 1) {
+          retries++;
+          // Exponential backoff: 1s, 2s, 4s, 8s
+          const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw error;
+      }
     }
-
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-
-    // Convert PCM to WAV for browser compatibility
-    const wavData = await toWav(audioBuffer);
-
-    return {
-      media: `data:audio/wav;base64,${wavData}`,
-    };
+    
+    throw new Error('GEMINI_TTS_SERVICE_BUSY');
   }
 );
 

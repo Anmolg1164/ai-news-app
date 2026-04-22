@@ -44,6 +44,7 @@ export function GitaWisdom() {
   const [loading, setLoading] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isVoiceLoading, setIsVoiceLoading] = useState(false);
   
   const translationCache = useRef<Record<string, TranslateVerseOutput>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -64,6 +65,7 @@ export function GitaWisdom() {
       audioRef.current.currentTime = 0;
     }
     setIsPlaying(false);
+    setIsVoiceLoading(false);
   };
 
   useEffect(() => {
@@ -128,7 +130,7 @@ export function GitaWisdom() {
   };
 
   const handlePlayAudio = async () => {
-    if (isPlaying) {
+    if (isPlaying || isVoiceLoading) {
       stopAudio();
       return;
     }
@@ -140,23 +142,33 @@ export function GitaWisdom() {
     
     const textToRead = translation ? translation.translatedVerse : currentVerse.english;
     
-    setIsPlaying(true);
+    setIsVoiceLoading(true);
     try {
       const { media } = await textToSpeech({ 
         text: textToRead, 
         voice: 'Vindemiatrix',
         style: 'serene'
       });
+      
       if (audioRef.current) {
         audioRef.current.src = media;
-        audioRef.current.play();
+        audioRef.current.play()
+          .then(() => {
+            setIsPlaying(true);
+            setIsVoiceLoading(false);
+          })
+          .catch(() => {
+            setIsPlaying(false);
+            setIsVoiceLoading(false);
+          });
       }
     } catch (error: any) {
       setIsPlaying(false);
+      setIsVoiceLoading(false);
       toast({
         variant: "destructive",
-        title: "Voice Busy",
-        description: "Gemini TTS service is temporarily occupied.",
+        title: "Voice Service Busy",
+        description: "Gemini TTS is waiting for quota reset. Try in 30 seconds.",
       });
     }
   };
@@ -179,7 +191,10 @@ export function GitaWisdom() {
       <audio 
         ref={audioRef} 
         onEnded={() => setIsPlaying(false)} 
-        onError={() => setIsPlaying(false)}
+        onError={() => {
+          setIsPlaying(false);
+          setIsVoiceLoading(false);
+        }}
         className="hidden" 
       />
       
@@ -239,10 +254,10 @@ export function GitaWisdom() {
                 disabled={isTranslating}
                 className={cn(
                   "h-8 w-8 text-[#b4945e] hover:bg-[#eee1c5] transition-all rounded-full",
-                  isPlaying && "bg-secondary/20 text-secondary animate-pulse"
+                  (isPlaying || isVoiceLoading) && "bg-secondary/20 text-secondary animate-pulse"
                 )}
               >
-                {isPlaying ? <Square size={14} fill="currentColor" /> : <Volume2 size={14} />}
+                {isVoiceLoading ? <Loader2 size={14} className="animate-spin" /> : isPlaying ? <Square size={14} fill="currentColor" /> : <Volume2 size={14} />}
               </Button>
             </div>
             <p className="text-sm text-[#5c4b37]/90 leading-relaxed font-serif">
