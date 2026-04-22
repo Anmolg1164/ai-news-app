@@ -10,7 +10,7 @@ import {
   ScrollText, 
   Volume2, 
   Loader2,
-  Languages
+  Square
 } from "lucide-react";
 import { interpretGitaVerse, type InterpretGitaVerseOutput } from "@/ai/flows/interpret-gita-verse";
 import { translateVerse, type TranslateVerseOutput } from "@/ai/flows/translate-verse";
@@ -36,11 +36,7 @@ const LANGUAGES = [
   { value: "Sanskrit", label: "Sanskrit (Romanized)" }
 ];
 
-interface GitaWisdomProps {
-  isListening?: boolean;
-}
-
-export function GitaWisdom({ isListening }: GitaWisdomProps) {
+export function GitaWisdom() {
   const [verseIndex, setVerseIndex] = useState(0);
   const [interpretation, setInterpretation] = useState<InterpretGitaVerseOutput | null>(null);
   const [translation, setTranslation] = useState<TranslateVerseOutput | null>(null);
@@ -62,6 +58,14 @@ export function GitaWisdom({ isListening }: GitaWisdomProps) {
     setVerseIndex(dayOfYear % verses.length);
   }, [verses.length]);
 
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setIsPlaying(false);
+  };
+
   const handleInterpret = async () => {
     if (loading) return;
     setLoading(true);
@@ -72,7 +76,7 @@ export function GitaWisdom({ isListening }: GitaWisdomProps) {
       toast({
         variant: "destructive",
         title: "Wisdom Service Busy",
-        description: "The AI reached its limit. Please wait a few seconds and try again.",
+        description: "The AI reached its limit. Please wait a few seconds.",
       });
     } finally {
       setLoading(false);
@@ -109,7 +113,7 @@ export function GitaWisdom({ isListening }: GitaWisdomProps) {
       toast({
         variant: "destructive",
         title: "Translation Error",
-        description: "Quota limit reached. Reverting to English for now.",
+        description: "Quota limit reached. Reverting to English.",
       });
       setSelectedLanguage("English");
     } finally {
@@ -118,47 +122,60 @@ export function GitaWisdom({ isListening }: GitaWisdomProps) {
   };
 
   const handlePlayAudio = async () => {
-    if (isPlaying) return;
+    if (isPlaying) {
+      stopAudio();
+      return;
+    }
+
+    // Stop all other audio globally
+    if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
+      (window as any).stopAllAudio();
+    }
     
-    // Choose the text based on translation
     const textToRead = translation ? translation.translatedVerse : currentVerse.english;
     
     setIsPlaying(true);
     try {
-      const { media } = await textToSpeech(textToRead);
+      const { media } = await textToSpeech({ 
+        text: textToRead, 
+        voice: 'Vindemiatrix',
+        style: 'serene'
+      });
       if (audioRef.current) {
         audioRef.current.src = media;
         audioRef.current.play();
       }
     } catch (error: any) {
-      setIsPlaying(false); // Reset on error
+      setIsPlaying(false);
       toast({
         variant: "destructive",
-        title: "Audio Error",
-        description: error.message?.includes('QUOTA') 
-          ? "ElevenLabs quota reached." 
-          : "Voice synthesis is temporarily unavailable.",
+        title: "Voice Busy",
+        description: "Gemini TTS service is temporarily occupied.",
       });
     }
-    // Note: setIsPlaying(false) happens in onEnded handler
   };
 
   const nextVerse = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    setIsPlaying(false);
+    stopAudio();
     setVerseIndex((prev) => (prev + 1) % verses.length);
     setInterpretation(null);
     setTranslation(null);
     setSelectedLanguage("English");
   };
 
+  // Register global stop function
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).stopAllAudio = () => {
+        stopAudio();
+      };
+    }
+  }, []);
+
   return (
     <Card className={cn(
       "parchment overflow-hidden border-none transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
-      "relative group",
-      isListening && "ring-4 ring-secondary animate-pulse shadow-[0_0_20px_rgba(180,148,94,0.6)]"
+      "relative group"
     )}>
       <audio 
         ref={audioRef} 
@@ -220,13 +237,13 @@ export function GitaWisdom({ isListening }: GitaWisdomProps) {
                 variant="ghost" 
                 size="icon" 
                 onClick={handlePlayAudio}
-                disabled={isPlaying || isTranslating}
+                disabled={isTranslating}
                 className={cn(
-                  "h-6 w-6 text-[#b4945e] hover:bg-[#eee1c5] transition-all",
-                  isPlaying && "animate-pulse scale-110 text-secondary"
+                  "h-8 w-8 text-[#b4945e] hover:bg-[#eee1c5] transition-all rounded-full",
+                  isPlaying && "bg-secondary/20 text-secondary animate-pulse"
                 )}
               >
-                {isPlaying ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />}
+                {isPlaying ? <Square size={14} fill="currentColor" /> : <Volume2 size={14} />}
               </Button>
             </div>
             <p className="text-sm text-[#5c4b37]/90 leading-relaxed font-serif">

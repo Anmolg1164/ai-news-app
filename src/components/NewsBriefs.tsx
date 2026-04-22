@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, Calendar, ExternalLink, ShieldCheck, Loader2, Sparkles, Globe, Languages, Volume2, Bookmark, BookmarkCheck } from "lucide-react";
+import { Newspaper, ExternalLink, ShieldCheck, Loader2, Sparkles, Globe, Languages, Volume2, Bookmark, BookmarkCheck, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { verifyNews, type VerifyNewsOutput } from "@/ai/flows/verify-news";
 import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
@@ -39,24 +38,23 @@ function NewsBriefCard({
   const [verifyData, setVerifyData] = useState<VerifyNewsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   
   const [translatedData, setTranslatedData] = useState<TranslateNewsOutput | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   
   const cardRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const translationCache = useRef<Record<string, TranslateNewsOutput>>({});
   const { toast } = useToast();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-        }
+        if (entry.isIntersecting) setIsVisible(true);
       },
       { threshold: 0.1 }
     );
-
     if (cardRef.current) observer.observe(cardRef.current);
     return () => observer.disconnect();
   }, []);
@@ -81,8 +79,7 @@ function NewsBriefCard({
       translationCache.current[cacheKey] = result;
       setTranslatedData(result);
     } catch (error: any) {
-      // Silent fail for lazy translation to avoid spamming user
-      console.warn("Lazy translation skipped (Rate limit)");
+      console.warn("Lazy translation skipped");
     } finally {
       setIsTranslating(false);
     }
@@ -90,11 +87,47 @@ function NewsBriefCard({
 
   useEffect(() => {
     if (isVisible && language !== "English" && !translatedData && !isTranslating) {
-      // Longer delay for lazy translation to save RPM for manual actions
       const timer = setTimeout(() => handleTranslation(language), 1500);
       return () => clearTimeout(timer);
     }
   }, [isVisible, language, translatedData, isTranslating, handleTranslation]);
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setIsPlaying(false);
+  };
+
+  const handlePlayAudio = async () => {
+    if (isPlaying) {
+      stopAudio();
+      return;
+    }
+
+    if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
+      (window as any).stopAllAudio();
+    }
+
+    setIsPlaying(true);
+    const textToRead = translatedData?.translatedContent || brief.content;
+
+    try {
+      const { media } = await textToSpeech({
+        text: textToRead,
+        voice: 'Charon',
+        style: 'analytical'
+      });
+      if (audioRef.current) {
+        audioRef.current.src = media;
+        audioRef.current.play();
+      }
+    } catch (error) {
+      setIsPlaying(false);
+      toast({ variant: "destructive", title: "Audio Error", description: "Gemini voice is busy." });
+    }
+  };
 
   const handleVerify = async () => {
     if (!showVerify && !verifyData) {
@@ -103,16 +136,7 @@ function NewsBriefCard({
         const result = await verifyNews({ headline: brief.title });
         setVerifyData(result);
       } catch (error: any) {
-        let title = "Verification Failed";
-        let desc = "AI service is currently busy.";
-        
-        if (error.message.includes('GEMINI_QUOTA')) {
-          desc = "Gemini API limit reached. Wait 60 seconds.";
-        } else if (error.message.includes('SERPER')) {
-          desc = "Search engine key issue. Please check config.";
-        }
-
-        toast({ variant: "destructive", title, description: desc });
+        toast({ variant: "destructive", title: "Verification Failed", description: "AI reached its limit. Try again soon." });
       } finally {
         setIsLoading(false);
       }
@@ -125,18 +149,15 @@ function NewsBriefCard({
 
   return (
     <div ref={cardRef} className="h-full relative">
+      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} className="hidden" />
       <Card className="border-none glass h-full flex flex-col overflow-hidden transition-all duration-500 hover:shadow-xl hover:-translate-y-1 rounded-[2rem] group/card">
         <CardHeader className="p-4 pb-2">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <span className="text-[8px] font-bold text-white bg-primary px-2 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-primary/20">
+              <span className="text-[8px] font-bold text-white bg-primary px-2 py-1 rounded-full uppercase tracking-widest">
                 {brief.category}
               </span>
-              {isTranslating && (
-                <div className="flex items-center gap-1 px-2 py-1 bg-accent/10 rounded-full text-[8px] font-bold text-accent animate-pulse">
-                  <Languages size={10} /> {language.toUpperCase()}
-                </div>
-              )}
+              {isTranslating && <Loader2 size={10} className="animate-spin text-accent" />}
             </div>
             <div className="flex items-center gap-2">
                <button 
@@ -147,7 +168,7 @@ function NewsBriefCard({
               </button>
             </div>
           </div>
-          <CardTitle className="text-base font-headline text-primary font-bold tracking-tight leading-tight group-hover/card:text-secondary transition-colors duration-500 line-clamp-2">
+          <CardTitle className="text-base font-headline text-primary font-bold tracking-tight leading-tight line-clamp-2">
             {currentTitle}
           </CardTitle>
         </CardHeader>
@@ -165,7 +186,6 @@ function NewsBriefCard({
                 {isLoading ? (
                   <div className="flex-1 flex flex-col items-center justify-center gap-2">
                     <Loader2 size={24} className="animate-spin text-secondary" />
-                    <span className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-[0.2em]">Agentic Fact-Check</span>
                   </div>
                 ) : verifyData ? (
                   <div className="space-y-4">
@@ -176,17 +196,6 @@ function NewsBriefCard({
                       </div>
                       <Progress value={verifyData.trustScore} className="h-1 bg-primary/10" />
                     </div>
-                    
-                    <div className="space-y-1">
-                      <span className="text-[9px] font-bold text-muted-foreground uppercase">Cross-References</span>
-                      {verifyData.crossReferences.map((ref, idx) => (
-                        <div key={idx} className="p-2 bg-primary/5 rounded-xl border border-primary/10">
-                          <p className="text-[10px] font-bold text-primary">{ref.outlet}</p>
-                          <p className="text-[9px] text-muted-foreground line-clamp-1 italic">"{ref.snippet}"</p>
-                        </div>
-                      ))}
-                    </div>
-
                     <div className="p-3 bg-secondary/10 rounded-2xl border border-secondary/20">
                       <p className="text-[11px] font-bold text-primary text-center">
                         Verdict: <span className={cn(verifyData.trustScore > 70 ? "text-emerald-600" : "text-amber-600")}>{verifyData.verdict}</span>
@@ -200,23 +209,28 @@ function NewsBriefCard({
         </CardContent>
 
         <CardFooter className="flex justify-between items-center px-4 py-3 border-t border-primary/5 bg-white/10">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleVerify}
-            className={cn("gap-1.5 h-7 px-3 rounded-full text-[9px] font-bold uppercase tracking-[0.1em] transition-all", showVerify ? 'bg-secondary text-primary shadow-md' : 'text-primary/40 hover:bg-primary/5 hover:text-primary')}
-          >
-            <ShieldCheck size={12} />
-            {showVerify ? "Back" : "Verify It"}
-          </Button>
-          {brief.url && brief.url.startsWith('http') && (
-            <a 
-              href={brief.url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="group/link flex items-center gap-1.5 text-[9px] font-bold text-primary/40 hover:text-accent uppercase tracking-widest transition-all"
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleVerify}
+              className={cn("gap-1.5 h-7 px-3 rounded-full text-[9px] font-bold uppercase tracking-[0.1em]", showVerify ? 'bg-secondary text-primary' : 'text-primary/40 hover:bg-primary/5')}
             >
-              Full Coverage <ExternalLink size={10} className="group-hover/link:translate-x-1 group-hover/link:-translate-y-0.5 transition-transform" />
+              <ShieldCheck size={12} />
+              {showVerify ? "Back" : "Verify"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handlePlayAudio}
+              className={cn("h-7 w-7 rounded-full text-primary/40", isPlaying && "bg-secondary/20 text-secondary animate-pulse")}
+            >
+              {isPlaying ? <Square size={12} fill="currentColor" /> : <Volume2 size={12} />}
+            </Button>
+          </div>
+          {brief.url && (
+            <a href={brief.url} target="_blank" className="text-[9px] font-bold text-primary/40 hover:text-accent uppercase tracking-widest">
+              Full Link <ExternalLink size={10} className="inline ml-1" />
             </a>
           )}
         </CardFooter>
@@ -260,56 +274,76 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
 
   const handleSave = (brief: NewsBrief) => {
     const isAlreadySaved = savedBriefs.some(b => b.id === brief.id);
-    let updated;
-    if (isAlreadySaved) {
-      updated = savedBriefs.filter(b => b.id !== brief.id);
-      toast({ title: "Removed from Library", description: "Article removed from your saved list." });
-    } else {
-      updated = [...savedBriefs, brief];
-      toast({ title: "Saved to Library", description: "You can find this article in your saved news." });
-    }
+    let updated = isAlreadySaved ? savedBriefs.filter(b => b.id !== brief.id) : [...savedBriefs, brief];
     setSavedBriefs(updated);
     localStorage.setItem("savedNews", JSON.stringify(updated));
+    toast({ title: isAlreadySaved ? "Removed" : "Saved", description: isAlreadySaved ? "Article removed." : "Added to library." });
+  };
+
+  const stopGlobalAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setIsPlaying(false);
+  };
+
+  const handleSummarizeAndAnnounce = async () => {
+    if (isPlaying) {
+      stopGlobalAudio();
+      return;
+    }
+
+    if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
+      (window as any).stopAllAudio();
+    }
+
+    const list = showSavedOnly ? savedBriefs : briefs;
+    if (list.length === 0) return;
+    
+    setIsSummarizing(true);
+    try {
+      const topArticles = list.slice(0, 10).map(b => ({ title: b.title, content: b.content }));
+      const { summary } = await summarizeNewsBatch({ articles: topArticles });
+      
+      const { media } = await textToSpeech({
+        text: summary,
+        voice: 'Charon',
+        style: 'professional'
+      });
+      if (audioRef.current) {
+        audioRef.current.src = media;
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Briefing Offline", description: "AI synthesis busy." });
+    } finally {
+      setIsSummarizing(false);
+    }
   };
 
   const fetchLiveNews = useCallback(async (pageToken?: string) => {
-    if (pageToken) {
-      setIsLoadingMore(true);
-    } else {
-      setLoading(true);
-    }
-
+    if (pageToken) setIsLoadingMore(true); else setLoading(true);
     try {
       const query = searchQuery ? searchQuery : `${category} news in ${country}`;
       const rawResults = await searchNewsTool({ query, page: pageToken });
       const parsed = JSON.parse(rawResults);
-      
-      if (parsed.error) {
-        if (parsed.error.includes("credit") || parsed.error.includes("429")) {
-          toast({ variant: "destructive", title: "API Quota Reached", description: "Daily NewsData.io credits exhausted. Please try again tomorrow." });
-        } else {
-          throw new Error(parsed.error);
-        }
-        return;
-      }
+      if (parsed.error) throw new Error(parsed.error);
 
       const newBriefs = (parsed.results || []).map((r: any, idx: number) => ({
-        id: r.link || `news-${idx}-${Date.now()}-${Math.random()}`,
-        title: r.title || "Latest Headline",
-        content: r.description || r.content || "Context loading from sources...",
+        id: r.link || `news-${idx}-${Date.now()}`,
+        title: r.title || "Headline",
+        content: r.description || r.content || "Content loading...",
         url: r.link,
         category: searchQuery ? "Discovery" : category,
-        publishedAt: r.pubDate ? new Date(r.pubDate).toLocaleDateString() : "Just Now"
+        publishedAt: r.pubDate || "Just Now"
       }));
 
-      if (pageToken) {
-        setBriefs(prev => [...prev, ...newBriefs]);
-      } else {
-        setBriefs(newBriefs);
-      }
+      setBriefs(prev => pageToken ? [...prev, ...newBriefs] : newBriefs);
       setNextPageToken(parsed.nextPage || null);
     } catch (error) {
-      toast({ variant: "destructive", title: "Feed Offline", description: "Sources are busy. Check your connection or API keys." });
+      toast({ variant: "destructive", title: "Feed Busy", description: "Source limit reached." });
     } finally {
       setLoading(false);
       setIsLoadingMore(false);
@@ -319,49 +353,15 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
   useEffect(() => {
     if (!showSavedOnly) {
       setBriefs([]);
-      setNextPageToken(null);
       fetchLiveNews();
     }
   }, [category, country, searchQuery, showSavedOnly, fetchLiveNews]);
 
   const handleInternalScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (onScroll) onScroll(e);
-
     if (showSavedOnly || loading || isLoadingMore || !nextPageToken) return;
-
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - scrollTop <= clientHeight + 500) {
-      fetchLiveNews(nextPageToken);
-    }
-  };
-
-  const handleSummarizeAndAnnounce = async () => {
-    const list = showSavedOnly ? savedBriefs : briefs;
-    if (list.length === 0 || isSummarizing || isPlaying) return;
-    
-    setIsSummarizing(true);
-    try {
-      const topArticles = list.slice(0, 10).map(b => ({ title: b.title, content: b.content }));
-      const { summary } = await summarizeNewsBatch({ articles: topArticles });
-      
-      const { media } = await textToSpeech(summary);
-      if (audioRef.current) {
-        audioRef.current.src = media;
-        audioRef.current.play();
-        setIsPlaying(true);
-        toast({ title: "Briefing Started", description: "Voice: Brian (Premium ElevenLabs)" });
-      }
-    } catch (error: any) {
-      let desc = "AI service busy.";
-      if (error.message.includes('ELEVENLABS')) {
-        desc = "ElevenLabs quota exceeded or key invalid.";
-      } else if (error.message.includes('GEMINI')) {
-        desc = "Gemini API busy. Wait 60 seconds.";
-      }
-      toast({ variant: "destructive", title: "Briefing Failed", description: desc });
-    } finally {
-      setIsSummarizing(false);
-    }
+    if (scrollHeight - scrollTop <= clientHeight + 500) fetchLiveNews(nextPageToken);
   };
 
   const currentBriefs = showSavedOnly ? savedBriefs : briefs;
@@ -369,38 +369,31 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
   return (
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-10 duration-1000">
       <audio ref={audioRef} onEnded={() => setIsPlaying(false)} className="hidden" />
-      
-      <div className="flex flex-row items-center justify-between gap-4 px-4 py-3 flex-shrink-0 bg-background/40 backdrop-blur-xl z-20 border-b border-primary/5">
+      <div className="flex flex-row items-center justify-between gap-4 px-4 py-3 flex-shrink-0 bg-background/40 backdrop-blur-xl border-b border-primary/5">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
             <Globe size={16} className="animate-spin-slow" />
           </div>
           <div>
             <h2 className="text-lg font-headline font-bold text-primary tracking-tight">
-              {showSavedOnly ? "My Library" : searchQuery ? `"${searchQuery}"` : `${category} Feed`}
+              {showSavedOnly ? "Library" : searchQuery ? `"${searchQuery}"` : `${category} Feed`}
             </h2>
             <div className="flex items-center gap-1.5">
-              <div className={cn("h-1 w-1 rounded-full", isPlaying ? "bg-accent animate-ping" : "bg-secondary animate-pulse")} />
-              <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">
-                {isPlaying ? "Live Briefing" : country}
-              </span>
+              <div className={cn("h-1 w-1 rounded-full", isPlaying ? "bg-accent animate-ping" : "bg-secondary")} />
+              <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">{country}</span>
             </div>
           </div>
         </div>
-        
         <Button 
           onClick={handleSummarizeAndAnnounce}
-          disabled={isSummarizing || isPlaying || (loading && !showSavedOnly)}
+          disabled={isSummarizing || (loading && !showSavedOnly)}
           size="sm"
-          className="rounded-xl bg-gradient-to-r from-primary to-secondary text-white hover:scale-105 active:scale-95 transition-all gap-1.5 h-8 px-4 shadow-lg shadow-primary/10"
+          className="rounded-xl bg-gradient-to-r from-primary to-secondary text-white hover:scale-105 transition-all gap-1.5 h-10 px-4"
         >
-          {isSummarizing ? <Loader2 className="animate-spin" size={14} /> : isPlaying ? <Volume2 className="animate-pulse" size={14} /> : <Sparkles size={14} />}
-          <span className="text-[10px] font-bold uppercase tracking-tight">
-            {isSummarizing ? "Thinking" : isPlaying ? "Reading" : "AI Insights"}
-          </span>
+          {isSummarizing ? <Loader2 className="animate-spin" size={14} /> : isPlaying ? <Square size={14} fill="currentColor" /> : <Sparkles size={14} />}
+          <span className="text-[10px] font-bold uppercase">Briefing</span>
         </Button>
       </div>
-      
       <div ref={ref} onScroll={handleInternalScroll} className="flex-1 overflow-y-auto custom-scrollbar px-3 pt-4 pb-32">
         {loading && !showSavedOnly && briefs.length === 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -409,25 +402,14 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         ) : currentBriefs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {currentBriefs.map((brief) => (
-              <NewsBriefCard 
-                key={brief.id} 
-                brief={brief} 
-                language={language} 
-                onSave={handleSave}
-                isSaved={savedBriefs.some(b => b.id === brief.id)}
-              />
+              <NewsBriefCard key={brief.id} brief={brief} language={language} onSave={handleSave} isSaved={savedBriefs.some(b => b.id === brief.id)} />
             ))}
-            {isLoadingMore && (
-              <>
-                <Skeleton className="h-40 w-full rounded-[2rem] glass" />
-                <Skeleton className="h-40 w-full rounded-[2rem] glass" />
-              </>
-            )}
+            {isLoadingMore && <Skeleton className="h-40 w-full rounded-[2rem] glass col-span-2" />}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-8 glass rounded-[2rem] text-center space-y-3">
             <Newspaper className="text-primary/20" size={32} />
-            <p className="text-primary/40 font-bold uppercase tracking-widest text-[10px]">No headlines found</p>
+            <p className="text-primary/40 font-bold uppercase tracking-widest text-[10px]">No news available</p>
           </div>
         )}
       </div>

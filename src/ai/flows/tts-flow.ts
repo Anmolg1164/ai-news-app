@@ -1,18 +1,31 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for converting text to speech using ElevenLabs API.
+ * @fileOverview A Genkit flow for converting text to speech using Gemini TTS.
+ * 
+ * - Charon: Mapped to Algenib (Informative/Analytical)
+ * - Vindemiatrix: Mapped to Pherkad (Gentle/Serene)
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
-const TTSInputSchema = z.string().describe('The text to convert to speech.');
+const TTSInputSchema = z.object({
+  text: z.string(),
+  voice: z.enum(['Charon', 'Vindemiatrix']).default('Charon'),
+  style: z.enum(['professional', 'analytical', 'serene']).optional(),
+});
+export type TTSInput = z.infer<typeof TTSInputSchema>;
+
 const TTSOutputSchema = z.object({
-  media: z.string().describe('Data URI of the generated audio.'),
+  media: z.string().describe('Data URI of the generated audio in WAV format.'),
 });
 
-export async function textToSpeech(text: string): Promise<{ media: string }> {
-  return ttsFlow(text);
+export async function textToSpeech(input: string | TTSInput): Promise<{ media: string }> {
+  if (typeof input === 'string') {
+    return ttsFlow({ text: input, voice: 'Charon' });
+  }
+  return ttsFlow(input);
 }
 
 const ttsFlow = ai.defineFlow(
@@ -21,50 +34,44 @@ const ttsFlow = ai.defineFlow(
     inputSchema: TTSInputSchema,
     outputSchema: TTSOutputSchema,
   },
-  async (text) => {
-    // API key provided by user
-    const ELEVEN_LABS_API_KEY = "sk_734d6eecd2ff229e590cb3021999594880ac4bbb697ef343";
-    const VOICE_ID = "pNInz6obpgnuMvoYeSOf"; // Brian (Professional)
+  async (input) => {
+    // Mapping personas to Gemini voices
+    const voiceName = input.voice === 'Vindemiatrix' ? 'Pherkad' : 'Algenib';
+    
+    // Constructing the stylized prompt based on the requested persona
+    let finalPrompt = input.text;
+    if (input.style === 'professional') finalPrompt = `[professional] ${input.text}`;
+    if (input.style === 'analytical') finalPrompt = `[analytical] ${input.text}`;
+    if (input.style === 'serene') finalPrompt = `[serene] [slow] ${input.text}`;
 
-    try {
-      const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "xi-api-key": ELEVEN_LABS_API_KEY,
+    const { media } = await ai.generate({
+      model: googleAI.model('gemini-2.5-flash-preview-tts'),
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName },
           },
-          body: JSON.stringify({
-            text: text,
-            model_id: "eleven_multilingual_v2", // Upgraded to support regional languages
-            voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.75,
-            },
-          }),
-        }
-      );
+        },
+      },
+      prompt: finalPrompt,
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("ElevenLabs Error Details:", errorData);
-        if (response.status === 401) throw new Error("ELEVENLABS_API_KEY_INVALID");
-        if (response.status === 429) throw new Error("ELEVENLABS_QUOTA_EXCEEDED");
-        throw new Error(`ELEVENLABS_ERROR_${response.status}`);
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64Audio = buffer.toString('base64');
-
-      return {
-        media: `data:audio/mpeg;base64,${base64Audio}`,
-      };
-    } catch (error: any) {
-      console.error("ElevenLabs TTS failed:", error.message);
-      throw error;
+    if (!media) {
+      throw new Error('GEMINI_TTS_FAILED');
     }
+
+    const audioBuffer = Buffer.from(
+      media.url.substring(media.url.indexOf(',') + 1),
+      'base64'
+    );
+
+    // Convert PCM to WAV for browser compatibility
+    const wavData = await toWav(audioBuffer);
+
+    return {
+      media: `data:audio/wav;base64,${wavData}`,
+    };
   }
 );
 
