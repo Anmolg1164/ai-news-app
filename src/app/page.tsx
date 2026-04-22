@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { Navigation } from "@/components/Navigation";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
-import { MapPin, Search, Bell, ChevronDown, ArrowUp, Languages, User, Settings, Bookmark, LogOut, Library } from "lucide-react";
+import { MapPin, Search, ChevronDown, ArrowUp, Languages, User, Settings, Bookmark, LogOut, Library } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -52,15 +53,13 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Register global stopAllAudio function
     if (typeof window !== 'undefined') {
       (window as any).stopAllAudio = () => {
         const audios = document.querySelectorAll('audio');
         audios.forEach(audio => {
           audio.pause();
-          audio.currentTime = 0;
+          // We don't reset currentTime here to allow pause/resume logic in specific components
         });
-        // Dispatch an event so components can update their isPlaying states
         window.dispatchEvent(new CustomEvent('stop-all-audio'));
       };
     }

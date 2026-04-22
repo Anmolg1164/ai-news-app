@@ -1,10 +1,11 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for converting text to speech using Gemini TTS.
  * 
  * - Charon: Mapped to Algenib (Informative/Analytical)
  * - Vindemiatrix: Mapped to Pherkad (Gentle/Serene)
- * - Configured with Indian English accent tags.
+ * - Explicitly configured with Indian English accent for region-specific clarity.
  * - Includes robust retry logic for 429 (Rate Limit) errors.
  */
 
@@ -40,15 +41,15 @@ const ttsFlow = ai.defineFlow(
     // Mapping personas to Gemini voices
     const voiceName = input.voice === 'Vindemiatrix' ? 'Pherkad' : 'Algenib';
     
-    // Constructing the stylized prompt with Indian English accent configuration
+    // Explicit Indian English accent configuration
     let finalPrompt = `[Indian English accent] ${input.text}`;
     
     if (input.style === 'professional') {
-      finalPrompt = `[professional] [Indian English accent] ${input.text}`;
+      finalPrompt = `[Indian English accent] [professional] ${input.text}`;
     } else if (input.style === 'analytical') {
-      finalPrompt = `[analytical] [Indian English accent] ${input.text}`;
+      finalPrompt = `[Indian English accent] [analytical] ${input.text}`;
     } else if (input.style === 'serene') {
-      finalPrompt = `[serene] [slow] [Indian English accent] ${input.text}`;
+      finalPrompt = `[Indian English accent] [serene] [slow] ${input.text}`;
     }
 
     let retries = 0;
@@ -78,7 +79,6 @@ const ttsFlow = ai.defineFlow(
           'base64'
         );
 
-        // Convert PCM to WAV for browser compatibility
         const wavData = await toWav(audioBuffer);
 
         return {
@@ -94,7 +94,7 @@ const ttsFlow = ai.defineFlow(
 
         if (isRateLimit && retries < maxRetries - 1) {
           retries++;
-          // Exponential backoff: 1s, 2s, 4s, 8s
+          // Exponential backoff
           const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;

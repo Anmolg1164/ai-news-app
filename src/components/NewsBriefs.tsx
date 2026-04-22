@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, ExternalLink, ShieldCheck, Loader2, Sparkles, Globe, Volume2, Bookmark, BookmarkCheck, Square } from "lucide-react";
+import { Newspaper, ExternalLink, ShieldCheck, Loader2, Sparkles, Globe, Volume2, Bookmark, BookmarkCheck, Square, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { verifyNews, type VerifyNewsOutput } from "@/ai/flows/verify-news";
 import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
@@ -27,18 +28,21 @@ function NewsBriefCard({
   brief, 
   language, 
   onSave, 
-  isSaved 
+  isSaved,
+  isDisabled
 }: { 
   brief: NewsBrief, 
   language: string, 
   onSave: (brief: NewsBrief) => void,
-  isSaved: boolean
+  isSaved: boolean,
+  isDisabled: boolean
 }) {
   const [showVerify, setShowVerify] = useState(false);
   const [verifyData, setVerifyData] = useState<VerifyNewsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   
   const [translatedData, setTranslatedData] = useState<TranslateNewsOutput | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -92,29 +96,35 @@ function NewsBriefCard({
     }
   }, [isVisible, language, translatedData, isTranslating, handleTranslation]);
 
-  const stopAudio = () => {
+  const forceCleanup = () => {
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+      audioRef.current.src = "";
+      audioRef.current.load();
     }
     setIsPlaying(false);
   };
 
   useEffect(() => {
-    const handleGlobalStop = () => stopAudio();
+    const handleGlobalStop = () => forceCleanup();
     window.addEventListener('stop-all-audio', handleGlobalStop);
     return () => window.removeEventListener('stop-all-audio', handleGlobalStop);
   }, []);
 
   const handlePlayAudio = async () => {
     if (isPlaying) {
-      stopAudio();
+      forceCleanup();
       return;
     }
 
     if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
       (window as any).stopAllAudio();
     }
+
+    setIsResetting(true);
+    // Cooldown delay
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setIsResetting(false);
 
     setIsPlaying(true);
     const textToRead = translatedData?.translatedContent || brief.content;
@@ -156,7 +166,7 @@ function NewsBriefCard({
   return (
     <div ref={cardRef} className="h-full relative">
       <audio ref={audioRef} onEnded={() => setIsPlaying(false)} className="hidden" />
-      <Card className="border-none glass h-full flex flex-col overflow-hidden transition-all duration-500 hover:shadow-xl hover:-translate-y-1 rounded-[2rem] group/card">
+      <Card className={cn("border-none glass h-full flex flex-col overflow-hidden transition-all duration-500 hover:shadow-xl hover:-translate-y-1 rounded-[2rem] group/card", isDisabled && "opacity-60 grayscale-[0.2]")}>
         <CardHeader className="p-4 pb-2">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -228,10 +238,11 @@ function NewsBriefCard({
             <Button
               variant="ghost"
               size="icon"
+              disabled={isDisabled || isResetting}
               onClick={handlePlayAudio}
               className={cn("h-7 w-7 rounded-full text-primary/40", isPlaying && "bg-secondary/20 text-secondary animate-pulse")}
             >
-              {isPlaying ? <Square size={12} fill="currentColor" /> : <Volume2 size={12} />}
+              {isResetting ? <Loader2 size={12} className="animate-spin" /> : isPlaying ? <Square size={12} fill="currentColor" /> : <Volume2 size={12} />}
             </Button>
           </div>
           {brief.url && (
@@ -267,9 +278,15 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
+  // Briefing States
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  
+  const [isPaused, setIsPaused] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [briefingScript, setBriefingScript] = useState<string | null>(null);
+  const [briefingAudioUrl, setBriefingAudioUrl] = useState<string | null>(null);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
@@ -280,9 +297,9 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     const handleGlobalStop = () => {
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
       }
       setIsPlaying(false);
+      setIsPaused(false);
     };
     window.addEventListener('stop-all-audio', handleGlobalStop);
     return () => window.removeEventListener('stop-all-audio', handleGlobalStop);
@@ -296,14 +313,24 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     toast({ title: isAlreadySaved ? "Removed" : "Saved", description: isAlreadySaved ? "Article removed." : "Added to library." });
   };
 
-  const handleSummarizeAndAnnounce = async () => {
-    if (isPlaying) {
-      if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
-        (window as any).stopAllAudio();
-      }
+  const handleBriefingControl = async () => {
+    // Resume Logic
+    if (isPaused && audioRef.current) {
+      audioRef.current.play();
+      setIsPlaying(true);
+      setIsPaused(false);
       return;
     }
 
+    // Pause Logic
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+      setIsPaused(true);
+      return;
+    }
+
+    // Start New Briefing
     if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
       (window as any).stopAllAudio();
     }
@@ -312,19 +339,30 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     if (list.length === 0) return;
     
     setIsSummarizing(true);
+    setIsResetting(true);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setIsResetting(false);
+
     try {
       const topArticles = list.slice(0, 10).map(b => ({ title: b.title, content: b.content }));
       const { summary } = await summarizeNewsBatch({ articles: topArticles });
+      setBriefingScript(summary);
+
+      // Clean resume version if needed
+      const cleanScript = `[Indian English accent] [professional] ${summary.replace(/Greetings.*?briefing\./i, '')}`;
       
       const { media } = await textToSpeech({
-        text: summary,
+        text: briefingAudioUrl ? cleanScript : summary, 
         voice: 'Charon',
         style: 'professional'
       });
+      
+      setBriefingAudioUrl(media);
       if (audioRef.current) {
         audioRef.current.src = media;
         audioRef.current.play();
         setIsPlaying(true);
+        setIsPaused(false);
       }
     } catch (error: any) {
       toast({ variant: "destructive", title: "Briefing Offline", description: "AI synthesis busy." });
@@ -378,7 +416,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
 
   return (
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-10 duration-1000">
-      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} className="hidden" />
+      <audio ref={audioRef} onEnded={() => { setIsPlaying(false); setIsPaused(false); setBriefingAudioUrl(null); }} className="hidden" />
       <div className="flex flex-row items-center justify-between gap-4 px-4 py-3 flex-shrink-0 bg-background/40 backdrop-blur-xl border-b border-primary/5">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -389,19 +427,19 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
               {showSavedOnly ? "Library" : searchQuery ? `"${searchQuery}"` : `${category} Feed`}
             </h2>
             <div className="flex items-center gap-1.5">
-              <div className={cn("h-1 w-1 rounded-full", isPlaying ? "bg-accent animate-ping" : "bg-secondary")} />
+              <div className={cn("h-1 w-1 rounded-full", (isPlaying || isPaused) ? "bg-accent animate-ping" : "bg-secondary")} />
               <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">{country}</span>
             </div>
           </div>
         </div>
         <Button 
-          onClick={handleSummarizeAndAnnounce}
-          disabled={isSummarizing || (loading && !showSavedOnly)}
+          onClick={handleBriefingControl}
+          disabled={isSummarizing || isResetting || (loading && !showSavedOnly)}
           size="sm"
           className="rounded-xl bg-gradient-to-r from-primary to-secondary text-white hover:scale-105 transition-all gap-1.5 h-10 px-4"
         >
-          {isSummarizing ? <Loader2 className="animate-spin" size={14} /> : isPlaying ? <Square size={14} fill="currentColor" /> : <Sparkles size={14} />}
-          <span className="text-[10px] font-bold uppercase">Briefing</span>
+          {isSummarizing || isResetting ? <Loader2 className="animate-spin" size={14} /> : isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+          <span className="text-[10px] font-bold uppercase">{isPaused ? "Resume" : isPlaying ? "Pause" : "Briefing"}</span>
         </Button>
       </div>
       <div ref={ref} onScroll={handleInternalScroll} className="flex-1 overflow-y-auto custom-scrollbar px-3 pt-4 pb-32">
@@ -412,7 +450,14 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         ) : currentBriefs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {currentBriefs.map((brief) => (
-              <NewsBriefCard key={brief.id} brief={brief} language={language} onSave={handleSave} isSaved={savedBriefs.some(b => b.id === brief.id)} />
+              <NewsBriefCard 
+                key={brief.id} 
+                brief={brief} 
+                language={language} 
+                onSave={handleSave} 
+                isSaved={savedBriefs.some(b => b.id === brief.id)}
+                isDisabled={isPlaying || isPaused}
+              />
             ))}
             {isLoadingMore && <Skeleton className="h-40 w-full rounded-[2rem] glass col-span-2" />}
           </div>

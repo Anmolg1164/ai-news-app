@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -45,6 +46,7 @@ export function GitaWisdom() {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isVoiceLoading, setIsVoiceLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   
   const translationCache = useRef<Record<string, TranslateVerseOutput>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -59,17 +61,18 @@ export function GitaWisdom() {
     setVerseIndex(dayOfYear % verses.length);
   }, [verses.length]);
 
-  const stopAudio = () => {
+  const forceCleanup = () => {
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+      audioRef.current.src = "";
+      audioRef.current.load();
     }
     setIsPlaying(false);
     setIsVoiceLoading(false);
   };
 
   useEffect(() => {
-    const handleGlobalStop = () => stopAudio();
+    const handleGlobalStop = () => forceCleanup();
     window.addEventListener('stop-all-audio', handleGlobalStop);
     return () => window.removeEventListener('stop-all-audio', handleGlobalStop);
   }, []);
@@ -131,15 +134,19 @@ export function GitaWisdom() {
 
   const handlePlayAudio = async () => {
     if (isPlaying || isVoiceLoading) {
-      stopAudio();
+      forceCleanup();
       return;
     }
 
-    // Stop all other audio globally
     if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
       (window as any).stopAllAudio();
     }
     
+    setIsResetting(true);
+    // Cooldown
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setIsResetting(false);
+
     const textToRead = translation ? translation.translatedVerse : currentVerse.english;
     
     setIsVoiceLoading(true);
@@ -250,14 +257,14 @@ export function GitaWisdom() {
               <Button 
                 variant="ghost" 
                 size="icon" 
+                disabled={isResetting}
                 onClick={handlePlayAudio}
-                disabled={isTranslating}
                 className={cn(
                   "h-8 w-8 text-[#b4945e] hover:bg-[#eee1c5] transition-all rounded-full",
-                  (isPlaying || isVoiceLoading) && "bg-secondary/20 text-secondary animate-pulse"
+                  (isPlaying || isVoiceLoading || isResetting) && "bg-secondary/20 text-secondary animate-pulse"
                 )}
               >
-                {isVoiceLoading ? <Loader2 size={14} className="animate-spin" /> : isPlaying ? <Square size={14} fill="currentColor" /> : <Volume2 size={14} />}
+                {isResetting ? <Loader2 size={14} className="animate-spin" /> : isVoiceLoading ? <Loader2 size={14} className="animate-spin" /> : isPlaying ? <Square size={14} fill="currentColor" /> : <Volume2 size={14} />}
               </Button>
             </div>
             <p className="text-sm text-[#5c4b37]/90 leading-relaxed font-serif">
