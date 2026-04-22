@@ -4,7 +4,7 @@
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, ExternalLink, ShieldCheck, Loader2, Sparkles, Globe, Volume2, Bookmark, BookmarkCheck, Square, Pause, Play } from "lucide-react";
+import { Newspaper, ExternalLink, ShieldCheck, Loader2, Sparkles, Globe, Volume2, Bookmark, BookmarkCheck, Square, Pause, Play, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { verifyNews, type VerifyNewsOutput } from "@/ai/flows/verify-news";
 import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
@@ -83,7 +83,7 @@ function NewsBriefCard({
       translationCache.current[cacheKey] = result;
       setTranslatedData(result);
     } catch (error: any) {
-      console.warn("Lazy translation skipped");
+      console.warn("Translation skip");
     } finally {
       setIsTranslating(false);
     }
@@ -122,7 +122,6 @@ function NewsBriefCard({
     }
 
     setIsResetting(true);
-    // Cooldown delay
     await new Promise(resolve => setTimeout(resolve, 300));
     setIsResetting(false);
 
@@ -141,7 +140,7 @@ function NewsBriefCard({
       }
     } catch (error) {
       setIsPlaying(false);
-      toast({ variant: "destructive", title: "Audio Error", description: "Gemini voice is busy." });
+      toast({ variant: "destructive", title: "Audio Busy", description: "Wait 15s for Gemini quota." });
     }
   };
 
@@ -152,7 +151,7 @@ function NewsBriefCard({
         const result = await verifyNews({ headline: brief.title });
         setVerifyData(result);
       } catch (error: any) {
-        toast({ variant: "destructive", title: "Verification Failed", description: "AI reached its limit. Try again soon." });
+        toast({ variant: "destructive", title: "Verify Busy", description: "Engines busy. Try in 30s." });
       } finally {
         setIsLoading(false);
       }
@@ -173,7 +172,12 @@ function NewsBriefCard({
               <span className="text-[8px] font-bold text-white bg-primary px-2 py-1 rounded-full uppercase tracking-widest">
                 {brief.category}
               </span>
-              {isTranslating && <Loader2 size={10} className="animate-spin text-accent" />}
+              {isTranslating && (
+                <div className="flex items-center gap-1.5">
+                  <Loader2 size={10} className="animate-spin text-accent" />
+                  <span className="text-[7px] font-bold text-accent uppercase tracking-tighter">to {language}...</span>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
                <button 
@@ -187,6 +191,10 @@ function NewsBriefCard({
           <CardTitle className="text-base font-headline text-primary font-bold tracking-tight leading-tight line-clamp-2">
             {currentTitle}
           </CardTitle>
+          <div className="flex items-center gap-1.5 mt-1">
+            <Calendar size={10} className="text-muted-foreground/60" />
+            <span className="text-[8px] font-bold text-muted-foreground/60 uppercase">{new Date(brief.publishedAt).toLocaleDateString()}</span>
+          </div>
         </CardHeader>
         
         <CardContent className="p-4 pt-1 flex-1 relative">
@@ -200,8 +208,9 @@ function NewsBriefCard({
             <div className="absolute inset-0 z-20 bg-white/10 p-4 animate-in fade-in zoom-in duration-500 overflow-y-auto custom-scrollbar">
               <div className="h-full flex flex-col gap-3">
                 {isLoading ? (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-2">
+                  <div className="flex-1 flex flex-col items-center justify-center gap-3">
                     <Loader2 size={24} className="animate-spin text-secondary" />
+                    <span className="text-[10px] font-bold text-primary/40 uppercase tracking-widest">Agentic Fact-Check...</span>
                   </div>
                 ) : verifyData ? (
                   <div className="space-y-4">
@@ -230,10 +239,11 @@ function NewsBriefCard({
               variant="ghost" 
               size="sm" 
               onClick={handleVerify}
+              disabled={isLoading}
               className={cn("gap-1.5 h-7 px-3 rounded-full text-[9px] font-bold uppercase tracking-[0.1em]", showVerify ? 'bg-secondary text-primary' : 'text-primary/40 hover:bg-primary/5')}
             >
-              <ShieldCheck size={12} />
-              {showVerify ? "Back" : "Verify"}
+              {isLoading ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />}
+              {showVerify ? "Back" : "Verify It"}
             </Button>
             <Button
               variant="ghost"
@@ -247,7 +257,7 @@ function NewsBriefCard({
           </div>
           {brief.url && (
             <a href={brief.url} target="_blank" className="text-[9px] font-bold text-primary/40 hover:text-accent uppercase tracking-widest">
-              Full Link <ExternalLink size={10} className="inline ml-1" />
+              Full <ExternalLink size={10} className="inline ml-1" />
             </a>
           )}
         </CardFooter>
@@ -279,12 +289,10 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
   const [loading, setLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
-  // Briefing States
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [briefingScript, setBriefingScript] = useState<string | null>(null);
   const [briefingAudioUrl, setBriefingAudioUrl] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -295,9 +303,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     if (saved) setSavedBriefs(JSON.parse(saved));
     
     const handleGlobalStop = () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      if (audioRef.current) audioRef.current.pause();
       setIsPlaying(false);
       setIsPaused(false);
     };
@@ -310,11 +316,10 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     let updated = isAlreadySaved ? savedBriefs.filter(b => b.id !== brief.id) : [...savedBriefs, brief];
     setSavedBriefs(updated);
     localStorage.setItem("savedNews", JSON.stringify(updated));
-    toast({ title: isAlreadySaved ? "Removed" : "Saved", description: isAlreadySaved ? "Article removed." : "Added to library." });
+    toast({ title: isAlreadySaved ? "Removed" : "Saved" });
   };
 
   const handleBriefingControl = async () => {
-    // Resume Logic
     if (isPaused && audioRef.current) {
       audioRef.current.play();
       setIsPlaying(true);
@@ -322,7 +327,6 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       return;
     }
 
-    // Pause Logic
     if (isPlaying && audioRef.current) {
       audioRef.current.pause();
       setIsPlaying(false);
@@ -330,7 +334,6 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       return;
     }
 
-    // Start New Briefing
     if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
       (window as any).stopAllAudio();
     }
@@ -346,13 +349,9 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     try {
       const topArticles = list.slice(0, 10).map(b => ({ title: b.title, content: b.content }));
       const { summary } = await summarizeNewsBatch({ articles: topArticles });
-      setBriefingScript(summary);
-
-      // Clean resume version if needed
-      const cleanScript = `[Indian English accent] [professional] ${summary.replace(/Greetings.*?briefing\./i, '')}`;
       
       const { media } = await textToSpeech({
-        text: briefingAudioUrl ? cleanScript : summary, 
+        text: summary, 
         voice: 'Charon',
         style: 'professional'
       });
@@ -365,7 +364,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         setIsPaused(false);
       }
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Briefing Offline", description: "AI synthesis busy." });
+      toast({ variant: "destructive", title: "Limit Reached", description: "Gemini quota hit. Try in 60s." });
     } finally {
       setIsSummarizing(false);
     }
@@ -377,21 +376,20 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       const query = searchQuery ? searchQuery : `${category} news in ${country}`;
       const rawResults = await searchNewsTool({ query, page: pageToken });
       const parsed = JSON.parse(rawResults);
-      if (parsed.error) throw new Error(parsed.error);
-
+      
       const newBriefs = (parsed.results || []).map((r: any, idx: number) => ({
         id: r.link || `news-${idx}-${Date.now()}`,
         title: r.title || "Headline",
         content: r.description || r.content || "Content loading...",
         url: r.link,
         category: searchQuery ? "Discovery" : category,
-        publishedAt: r.pubDate || "Just Now"
+        publishedAt: r.pubDate || new Date().toISOString()
       }));
 
       setBriefs(prev => pageToken ? [...prev, ...newBriefs] : newBriefs);
       setNextPageToken(parsed.nextPage || null);
     } catch (error) {
-      toast({ variant: "destructive", title: "Feed Busy", description: "Source limit reached." });
+      toast({ variant: "destructive", title: "Feed Busy" });
     } finally {
       setLoading(false);
       setIsLoadingMore(false);
@@ -420,7 +418,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       <div className="flex flex-row items-center justify-between gap-4 px-4 py-3 flex-shrink-0 bg-background/40 backdrop-blur-xl border-b border-primary/5">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-            <Globe size={16} className="animate-spin-slow" />
+            <Globe size={16} />
           </div>
           <div>
             <h2 className="text-lg font-headline font-bold text-primary tracking-tight">
@@ -439,7 +437,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
           className="rounded-xl bg-gradient-to-r from-primary to-secondary text-white hover:scale-105 transition-all gap-1.5 h-10 px-4"
         >
           {isSummarizing || isResetting ? <Loader2 className="animate-spin" size={14} /> : isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-          <span className="text-[10px] font-bold uppercase">{isPaused ? "Resume" : isPlaying ? "Pause" : "Briefing"}</span>
+          <span className="text-[10px] font-bold uppercase">{isPaused ? "Resume" : isPlaying ? "Pause" : "AI Insight"}</span>
         </Button>
       </div>
       <div ref={ref} onScroll={handleInternalScroll} className="flex-1 overflow-y-auto custom-scrollbar px-3 pt-4 pb-32">
@@ -464,7 +462,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         ) : (
           <div className="flex flex-col items-center justify-center p-8 glass rounded-[2rem] text-center space-y-3">
             <Newspaper className="text-primary/20" size={32} />
-            <p className="text-primary/40 font-bold uppercase tracking-widest text-[10px]">No news available</p>
+            <p className="text-primary/40 font-bold uppercase tracking-widest text-[10px]">Library Empty</p>
           </div>
         )}
       </div>

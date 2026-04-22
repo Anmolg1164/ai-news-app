@@ -38,7 +38,6 @@ const ttsFlow = ai.defineFlow(
     outputSchema: TTSOutputSchema,
   },
   async (input) => {
-    // Mapping personas to Gemini voices
     const voiceName = input.voice === 'Vindemiatrix' ? 'Pherkad' : 'Algenib';
     
     // Explicit Indian English accent configuration
@@ -95,7 +94,7 @@ const ttsFlow = ai.defineFlow(
         if (isRateLimit && retries < maxRetries - 1) {
           retries++;
           // Exponential backoff
-          const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+          const delay = Math.pow(2, retries) * 1200 + Math.random() * 500;
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
