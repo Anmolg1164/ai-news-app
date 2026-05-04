@@ -4,7 +4,7 @@
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, ExternalLink, ShieldCheck, Loader2, Sparkles, Globe, Volume2, Bookmark, BookmarkCheck, Square, Pause, Play, Calendar } from "lucide-react";
+import { Newspaper, ExternalLink, ShieldCheck, Loader2, Globe, Volume2, Bookmark, BookmarkCheck, Square, Play, Pause, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { verifyNews, type VerifyNewsOutput } from "@/ai/flows/verify-news";
 import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
@@ -74,6 +74,8 @@ function NewsBriefCard({
       return;
     }
     setIsTranslating(true);
+    // Track AI activity
+    window.dispatchEvent(new CustomEvent('ai-call'));
     try {
       const result = await translateNews({
         title: brief.title,
@@ -83,7 +85,7 @@ function NewsBriefCard({
       translationCache.current[cacheKey] = result;
       setTranslatedData(result);
     } catch (error: any) {
-      console.warn("Translation skip");
+      console.warn("Translation skip due to limit");
     } finally {
       setIsTranslating(false);
     }
@@ -91,7 +93,7 @@ function NewsBriefCard({
 
   useEffect(() => {
     if (isVisible && language !== "English" && !translatedData && !isTranslating) {
-      const timer = setTimeout(() => handleTranslation(language), 1500);
+      const timer = setTimeout(() => handleTranslation(language), 2000);
       return () => clearTimeout(timer);
     }
   }, [isVisible, language, translatedData, isTranslating, handleTranslation]);
@@ -127,6 +129,7 @@ function NewsBriefCard({
 
     setIsPlaying(true);
     const textToRead = translatedData?.translatedContent || brief.content;
+    window.dispatchEvent(new CustomEvent('ai-call'));
 
     try {
       const { media } = await textToSpeech({
@@ -140,18 +143,19 @@ function NewsBriefCard({
       }
     } catch (error) {
       setIsPlaying(false);
-      toast({ variant: "destructive", title: "Audio Busy", description: "Wait 15s for Gemini quota." });
+      toast({ variant: "destructive", title: "Rate Limit", description: "Gemini RPM reached. Wait 60s." });
     }
   };
 
   const handleVerify = async () => {
     if (!showVerify && !verifyData) {
       setIsLoading(true);
+      window.dispatchEvent(new CustomEvent('ai-call'));
       try {
         const result = await verifyNews({ headline: brief.title });
         setVerifyData(result);
       } catch (error: any) {
-        toast({ variant: "destructive", title: "Verify Busy", description: "Engines busy. Try in 30s." });
+        toast({ variant: "destructive", title: "Verify Busy", description: "Wait 60s for RPM reset." });
       } finally {
         setIsLoading(false);
       }
@@ -210,7 +214,7 @@ function NewsBriefCard({
                 {isLoading ? (
                   <div className="flex-1 flex flex-col items-center justify-center gap-3">
                     <Loader2 size={24} className="animate-spin text-secondary" />
-                    <span className="text-[10px] font-bold text-primary/40 uppercase tracking-widest">Agentic Fact-Check...</span>
+                    <span className="text-[10px] font-bold text-primary/40 uppercase tracking-widest">Cross-Referencing...</span>
                   </div>
                 ) : verifyData ? (
                   <div className="space-y-4">
@@ -316,7 +320,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     let updated = isAlreadySaved ? savedBriefs.filter(b => b.id !== brief.id) : [...savedBriefs, brief];
     setSavedBriefs(updated);
     localStorage.setItem("savedNews", JSON.stringify(updated));
-    toast({ title: isAlreadySaved ? "Removed" : "Saved" });
+    toast({ title: isAlreadySaved ? "Removed from Library" : "Added to Library" });
   };
 
   const handleBriefingControl = async () => {
@@ -343,6 +347,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     
     setIsSummarizing(true);
     setIsResetting(true);
+    window.dispatchEvent(new CustomEvent('ai-call'));
     await new Promise(resolve => setTimeout(resolve, 300));
     setIsResetting(false);
 
@@ -364,7 +369,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         setIsPaused(false);
       }
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Limit Reached", description: "Gemini quota hit. Try in 60s." });
+      toast({ variant: "destructive", title: "Rate Limit", description: "Gemini Minute Limit reached. Wait 60s." });
     } finally {
       setIsSummarizing(false);
     }
@@ -461,8 +466,8 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-8 glass rounded-[2rem] text-center space-y-3">
-            <Newspaper className="text-primary/20" size={32} />
-            <p className="text-primary/40 font-bold uppercase tracking-widest text-[10px]">Library Empty</p>
+            <Bookmark className="text-primary/20" size={32} />
+            <p className="text-primary/40 font-bold uppercase tracking-widest text-[10px]">Your library is empty</p>
           </div>
         )}
       </div>
