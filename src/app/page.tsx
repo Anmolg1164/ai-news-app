@@ -6,7 +6,7 @@ import { Navigation } from "@/components/Navigation";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
 import { CurrencyConverter } from "@/components/CurrencyConverter";
-import { MapPin, Search, ChevronDown, ArrowUp, Languages, Activity, Cpu, ShieldCheck, Bookmark, BookmarkCheck } from "lucide-react";
+import { MapPin, Search, ChevronDown, ArrowUp, Languages, Activity, ShieldCheck, Bookmark, BookmarkCheck } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -73,7 +73,7 @@ export default function Home() {
 
     const recoveryInterval = setInterval(() => {
       setAiUsage(prev => Math.max(0, prev - 5));
-    }, 3000); // Recover 5% every 3 seconds
+    }, 3000); // Recover 5% every 3 seconds (100% in 60s)
 
     return () => {
       window.removeEventListener('ai-call', handleAiCall);
@@ -199,7 +199,7 @@ export default function Home() {
             <Popover>
               <PopoverTrigger asChild>
                 <button className="relative group p-2 rounded-xl hover:bg-white/60 transition-all text-muted-foreground">
-                  <Cpu size={20} className={cn(aiUsage > 70 ? "text-accent animate-pulse" : "group-hover:text-primary")} />
+                  <Activity size={20} className={cn(aiUsage > 70 ? "text-accent animate-pulse" : "group-hover:text-primary")} />
                   {aiUsage > 20 && <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-primary rounded-full" />}
                 </button>
               </PopoverTrigger>
