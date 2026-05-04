@@ -29,9 +29,7 @@ const searchReputableNews = ai.defineTool(
     outputSchema: z.string(),
   },
   async ({ query }) => {
-    // Using user provided key as fallback
     const SERPER_API_KEY = process.env.SERPER_API_KEY || "eda72dfa7cf331c0e0b4a475a679f32c7c82feed";
-    
     const domains = "site:reuters.com OR site:bbc.com OR site:apnews.com OR site:nytimes.com OR site:aljazeera.com";
     
     try {
@@ -58,7 +56,8 @@ const searchReputableNews = ai.defineTool(
 );
 
 export async function verifyNews(input: VerifyNewsInput): Promise<VerifyNewsOutput> {
-  return verifyNewsFlow(input);
+  const { output } = await verifyNewsPrompt(input);
+  return output!;
 }
 
 const verifyNewsPrompt = ai.definePrompt({
@@ -74,35 +73,3 @@ const verifyNewsPrompt = ai.definePrompt({
   3. Extract up to 3 cross-references.
   4. Provide a verdict: "Widely Verified", "Moderately Verified", or "Limited Coverage Found".`,
 });
-
-const verifyNewsFlow = ai.defineFlow(
-  {
-    name: 'verifyNewsFlow',
-    inputSchema: VerifyNewsInputSchema,
-    outputSchema: VerifyNewsOutputSchema,
-  },
-  async (input) => {
-    let retries = 0;
-    const maxRetries = 5;
-    
-    while (retries < maxRetries) {
-      try {
-        const { output } = await verifyNewsPrompt(input);
-        if (!output) throw new Error('GEMINI_EMPTY');
-        return output;
-      } catch (error: any) {
-        const msg = error.message?.toLowerCase() || "";
-        const isRateLimit = msg.includes('429') || msg.includes('quota') || error.status === 429;
-        
-        if (isRateLimit && retries < maxRetries - 1) {
-          retries++;
-          const delay = Math.pow(2, retries) * 1500;
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-        throw error;
-      }
-    }
-    throw new Error('VERIFICATION_TIMEOUT');
-  }
-);

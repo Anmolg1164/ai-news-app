@@ -1,8 +1,6 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for fetching journey-specific intelligence using real APIs.
- * 
- * - fetchNews: A Server Action to fetch news using the newsData tool logic.
+ * @fileOverview A Genkit flow for fetching news intelligence.
  */
 
 import { ai } from '@/ai/genkit';
@@ -20,7 +18,7 @@ export const searchNews = ai.defineTool(
     outputSchema: z.string(),
   },
   async ({ query, page }) => {
-    const apiKey = process.env.NEWS_API_KEY || "pub_7015099c158564175376044710f6396e9842c"; // Fallback key if env missing
+    const apiKey = process.env.NEWS_API_KEY || "pub_7015099c158564175376044710f6396e9842c";
     
     try {
       let url = `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`;
@@ -53,21 +51,9 @@ export const searchNews = ai.defineTool(
   }
 );
 
-// Define a Flow specifically for fetching news to be used as a Server Action
-const fetchNewsFlow = ai.defineFlow(
-  {
-    name: 'fetchNewsFlow',
-    inputSchema: z.object({ 
-      query: z.string(),
-      page: z.string().optional()
-    }),
-    outputSchema: z.string(),
-  },
-  async (input) => {
-    return await searchNews(input);
-  }
-);
-
+/**
+ * Server Action to fetch news.
+ */
 export async function fetchNews(input: { query: string, page?: string }): Promise<string> {
-  return fetchNewsFlow(input);
+  return await searchNews(input);
 }
