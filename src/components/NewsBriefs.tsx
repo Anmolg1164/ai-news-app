@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
@@ -8,7 +7,7 @@ import { Newspaper, ExternalLink, ShieldCheck, Loader2, Globe, Volume2, Bookmark
 import { Button } from "@/components/ui/button";
 import { verifyNews, type VerifyNewsOutput } from "@/ai/flows/verify-news";
 import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
-import { searchNews as searchNewsTool } from "@/ai/flows/get-journey-intelligence";
+import { fetchNews } from "@/ai/flows/get-journey-intelligence";
 import { summarizeNewsBatch } from "@/ai/flows/summarize-news-batch";
 import { textToSpeech } from "@/ai/flows/tts-flow";
 import { useToast } from "@/hooks/use-toast";
@@ -74,7 +73,6 @@ function NewsBriefCard({
       return;
     }
     setIsTranslating(true);
-    // Track AI activity
     window.dispatchEvent(new CustomEvent('ai-call'));
     try {
       const result = await translateNews({
@@ -85,7 +83,7 @@ function NewsBriefCard({
       translationCache.current[cacheKey] = result;
       setTranslatedData(result);
     } catch (error: any) {
-      console.warn("Translation skip due to limit");
+      console.warn("Translation skipped");
     } finally {
       setIsTranslating(false);
     }
@@ -93,7 +91,7 @@ function NewsBriefCard({
 
   useEffect(() => {
     if (isVisible && language !== "English" && !translatedData && !isTranslating) {
-      const timer = setTimeout(() => handleTranslation(language), 2000);
+      const timer = setTimeout(() => handleTranslation(language), 1500);
       return () => clearTimeout(timer);
     }
   }, [isVisible, language, translatedData, isTranslating, handleTranslation]);
@@ -143,7 +141,7 @@ function NewsBriefCard({
       }
     } catch (error) {
       setIsPlaying(false);
-      toast({ variant: "destructive", title: "Rate Limit", description: "Gemini RPM reached. Wait 60s." });
+      toast({ variant: "destructive", title: "Rate Limit", description: "Voice limit reached." });
     }
   };
 
@@ -155,7 +153,7 @@ function NewsBriefCard({
         const result = await verifyNews({ headline: brief.title });
         setVerifyData(result);
       } catch (error: any) {
-        toast({ variant: "destructive", title: "Verify Busy", description: "Wait 60s for RPM reset." });
+        toast({ variant: "destructive", title: "Verify Busy", description: "Wait a moment for quota reset." });
       } finally {
         setIsLoading(false);
       }
@@ -297,7 +295,6 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [briefingAudioUrl, setBriefingAudioUrl] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
@@ -361,7 +358,6 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         style: 'professional'
       });
       
-      setBriefingAudioUrl(media);
       if (audioRef.current) {
         audioRef.current.src = media;
         audioRef.current.play();
@@ -369,7 +365,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         setIsPaused(false);
       }
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Rate Limit", description: "Gemini Minute Limit reached. Wait 60s." });
+      toast({ variant: "destructive", title: "Limit Reached", description: "Wait a moment for quota reset." });
     } finally {
       setIsSummarizing(false);
     }
@@ -379,9 +375,15 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     if (pageToken) setIsLoadingMore(true); else setLoading(true);
     try {
       const query = searchQuery ? searchQuery : `${category} news in ${country}`;
-      const rawResults = await searchNewsTool({ query, page: pageToken });
+      const rawResults = await fetchNews({ query, page: pageToken });
       const parsed = JSON.parse(rawResults);
       
+      if (parsed.error === "NEWS_API_KEY_MISSING") {
+        toast({ variant: "destructive", title: "API Key Missing", description: "Please add NEWS_API_KEY to your .env file." });
+        setLoading(false);
+        return;
+      }
+
       const newBriefs = (parsed.results || []).map((r: any, idx: number) => ({
         id: r.link || `news-${idx}-${Date.now()}`,
         title: r.title || "Headline",
@@ -394,7 +396,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       setBriefs(prev => pageToken ? [...prev, ...newBriefs] : newBriefs);
       setNextPageToken(parsed.nextPage || null);
     } catch (error) {
-      toast({ variant: "destructive", title: "Feed Busy" });
+      toast({ variant: "destructive", title: "Feed Error" });
     } finally {
       setLoading(false);
       setIsLoadingMore(false);
@@ -419,7 +421,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
 
   return (
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-10 duration-1000">
-      <audio ref={audioRef} onEnded={() => { setIsPlaying(false); setIsPaused(false); setBriefingAudioUrl(null); }} className="hidden" />
+      <audio ref={audioRef} onEnded={() => { setIsPlaying(false); setIsPaused(false); }} className="hidden" />
       <div className="flex flex-row items-center justify-between gap-4 px-4 py-3 flex-shrink-0 bg-background/40 backdrop-blur-xl border-b border-primary/5">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">

@@ -1,35 +1,15 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for fetching journey-specific intelligence using real APIs.
+ * 
+ * - fetchNews: A Server Action to fetch news using the newsData tool logic.
+ * - getJourneyIntelligence: A flow for aggregate intelligence (weather, news, currency).
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-// Input/Output Schemas
-const JourneyIntelligenceInputSchema = z.object({
-  category: z.string().describe('The navigation category (e.g., Explore, Destinations, Wisdom).'),
-});
-export type JourneyIntelligenceInput = z.infer<typeof JourneyIntelligenceInputSchema>;
-
-const JourneyIntelligenceOutputSchema = z.object({
-  summary: z.string().describe('A 2-sentence summary of latest news for this category.'),
-  country: z.string().nullable().describe('The primary country identified in the news.'),
-  weather: z.string().nullable().describe('Current weather conditions in that country.'),
-  currency: z.string().nullable().describe('Local currency and approximate exchange rate to USD.'),
-  travelAlert: z.string().nullable().describe('A brief travel advisory if applicable.'),
-  sourceRegion: z.string().describe('The primary geographical region of the news sources (e.g. North America, Asia, Europe).'),
-  complexTerms: z.array(z.object({
-    term: z.string().describe('The complex term found in the summary.'),
-    explanation: z.string().describe('A 1-sentence ELIF explanation of the term.')
-  })).optional().describe('A list of complex terms and their simple explanations.')
-});
-export type JourneyIntelligenceOutput = z.infer<typeof JourneyIntelligenceOutputSchema>;
-
-/**
- * Tool to fetch latest news using NewsData.io
- * Updated to return structured JSON for better pagination handling
- */
+// Tool to fetch latest news using NewsData.io
 export const searchNews = ai.defineTool(
   {
     name: 'searchNews',
@@ -42,7 +22,7 @@ export const searchNews = ai.defineTool(
   },
   async ({ query, page }) => {
     const apiKey = process.env.NEWS_API_KEY;
-    if (!apiKey) return JSON.stringify({ error: "News API key missing." });
+    if (!apiKey) return JSON.stringify({ error: "NEWS_API_KEY_MISSING" });
     
     try {
       let url = `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`;
@@ -66,14 +46,31 @@ export const searchNews = ai.defineTool(
         nextPage: data.nextPage || null
       });
     } catch (e) {
-      return JSON.stringify({ error: "Error fetching news." });
+      return JSON.stringify({ error: "FETCH_ERROR" });
     }
   }
 );
 
-/**
- * Tool to fetch current weather using OpenWeatherMap
- */
+// Define a Flow specifically for fetching news to be used as a Server Action
+const fetchNewsFlow = ai.defineFlow(
+  {
+    name: 'fetchNewsFlow',
+    inputSchema: z.object({ 
+      query: z.string(),
+      page: z.string().optional()
+    }),
+    outputSchema: z.string(),
+  },
+  async (input) => {
+    return searchNews(input);
+  }
+);
+
+export async function fetchNews(input: { query: string, page?: string }): Promise<string> {
+  return fetchNewsFlow(input);
+}
+
+// Other Intelligence Tools
 const getWeather = ai.defineTool(
   {
     name: 'getWeather',
@@ -98,9 +95,6 @@ const getWeather = ai.defineTool(
   }
 );
 
-/**
- * Tool to fetch exchange rates using ExchangeRate-API
- */
 const getExchangeRate = ai.defineTool(
   {
     name: 'getExchangeRate',
@@ -125,6 +119,26 @@ const getExchangeRate = ai.defineTool(
   }
 );
 
+// Aggregate Intelligence Flow
+const JourneyIntelligenceInputSchema = z.object({
+  category: z.string(),
+});
+export type JourneyIntelligenceInput = z.infer<typeof JourneyIntelligenceInputSchema>;
+
+const JourneyIntelligenceOutputSchema = z.object({
+  summary: z.string(),
+  country: z.string().nullable(),
+  weather: z.string().nullable(),
+  currency: z.string().nullable(),
+  travelAlert: z.string().nullable(),
+  sourceRegion: z.string(),
+  complexTerms: z.array(z.object({
+    term: z.string(),
+    explanation: z.string()
+  })).optional()
+});
+export type JourneyIntelligenceOutput = z.infer<typeof JourneyIntelligenceOutputSchema>;
+
 export async function getJourneyIntelligence(
   input: JourneyIntelligenceInput
 ): Promise<JourneyIntelligenceOutput> {
@@ -137,20 +151,12 @@ const journeyIntelligencePrompt = ai.definePrompt({
   output: { schema: JourneyIntelligenceOutputSchema },
   tools: [searchNews, getWeather, getExchangeRate],
   prompt: `You are an Agentic Travel Intelligence officer.
-  Current Category: "{{category}}"
+  Category: "{{category}}"
   
-  Instructions:
-  1. Use "searchNews" to find real, latest updates related to "{{category}}".
-  2. Identify the primary focus country from the news results.
-  3. Determine the primary geographical region (e.g., Asia, Europe, North America) of the majority of these sources and return it in sourceRegion.
-  4. If a country is identified:
-     - Determine its capital or major city and use "getWeather" to fetch real-time conditions.
-     - Identify the official currency code (ISO 4217, e.g., INR for India) and use "getExchangeRate" to get the latest USD conversion.
-  5. Write a concise 2-sentence summary of the fetched news.
-  6. Check for any specific travel warnings or alerts in the news and include them in travelAlert.
-  7. Identify up to 3 complex terms (economic, technical, or cultural) used in your summary. For each, provide a 1-sentence 'Explain Like I'm Five' (ELIF) definition in the complexTerms array.
-  
-  If no specific country is identified, set country, weather, and currency to null.`,
+  1. Use "searchNews" for latest updates.
+  2. Identify primary focus country.
+  3. Fetch weather and exchange rates if country found.
+  4. Summarize findings in 2 sentences.`,
 });
 
 const journeyIntelligenceFlow = ai.defineFlow(
