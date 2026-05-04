@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for converting text to speech using Gemini TTS.
+ * @fileOverview A Genkit flow for converting text to speech using Gemini TTS with Indian English accent.
  */
 
 import { ai } from '@/ai/genkit';
@@ -13,10 +13,6 @@ const TTSInputSchema = z.object({
 });
 export type TTSInput = z.infer<typeof TTSInputSchema>;
 
-const TTSOutputSchema = z.object({
-  media: z.string().describe('Data URI of the generated audio in WAV format.'),
-});
-
 export async function textToSpeech(input: string | TTSInput): Promise<{ media: string }> {
   const finalInput = typeof input === 'string' ? { text: input, voice: 'Charon' as const } : input;
   
@@ -24,6 +20,7 @@ export async function textToSpeech(input: string | TTSInput): Promise<{ media: s
   // Pherkad: Serene (Male/Neutral)
   const voiceName = finalInput.voice === 'Vindemiatrix' ? 'Pherkad' : 'Algenib';
   
+  // Explicit Indian English Accent configuration
   let finalPrompt = `[Indian English accent] ${finalInput.text}`;
   if (finalInput.style === 'professional') finalPrompt = `[Indian English accent] [professional] ${finalInput.text}`;
   else if (finalInput.style === 'analytical') finalPrompt = `[Indian English accent] [analytical] ${finalInput.text}`;

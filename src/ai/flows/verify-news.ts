@@ -29,7 +29,8 @@ const searchReputableNews = ai.defineTool(
     outputSchema: z.string(),
   },
   async ({ query }) => {
-    const SERPER_API_KEY = process.env.SERPER_API_KEY || "eda72dfa7cf331c0e0b4a475a679f32c7c82feed";
+    // Stable hardcoded key fallback
+    const SERPER_API_KEY = "eda72dfa7cf331c0e0b4a475a679f32c7c82feed";
     const domains = "site:reuters.com OR site:bbc.com OR site:apnews.com OR site:nytimes.com OR site:aljazeera.com";
     
     try {
