@@ -29,8 +29,8 @@ const searchReputableNews = ai.defineTool(
     outputSchema: z.string(),
   },
   async ({ query }) => {
-    const SERPER_API_KEY = process.env.SERPER_API_KEY;
-    if (!SERPER_API_KEY) return JSON.stringify({ error: "SERPER_KEY_MISSING" });
+    // Using user provided key as fallback
+    const SERPER_API_KEY = process.env.SERPER_API_KEY || "eda72dfa7cf331c0e0b4a475a679f32c7c82feed";
     
     const domains = "site:reuters.com OR site:bbc.com OR site:apnews.com OR site:nytimes.com OR site:aljazeera.com";
     
@@ -69,10 +69,10 @@ const verifyNewsPrompt = ai.definePrompt({
   prompt: `You are an AI Fact Checker Agent. 
   Headline: "{{headline}}"
   
-  1. Use "searchReputableNews" to find matching reports.
-  2. Determine Trust Score (0-100%).
-  3. Extract 3 cross-references.
-  4. Provide verdict: "Widely Verified", "Moderately Verified", or "Limited Coverage Found".`,
+  1. Use "searchReputableNews" to find matching reports from reputable domains.
+  2. Determine a Trust Score (0-100%) based on the coverage density.
+  3. Extract up to 3 cross-references.
+  4. Provide a verdict: "Widely Verified", "Moderately Verified", or "Limited Coverage Found".`,
 });
 
 const verifyNewsFlow = ai.defineFlow(
@@ -92,9 +92,11 @@ const verifyNewsFlow = ai.defineFlow(
         return output;
       } catch (error: any) {
         const msg = error.message?.toLowerCase() || "";
-        if ((msg.includes('429') || msg.includes('quota')) && retries < maxRetries - 1) {
+        const isRateLimit = msg.includes('429') || msg.includes('quota') || error.status === 429;
+        
+        if (isRateLimit && retries < maxRetries - 1) {
           retries++;
-          const delay = Math.pow(2, retries) * 2000;
+          const delay = Math.pow(2, retries) * 1500;
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }

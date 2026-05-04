@@ -83,7 +83,7 @@ function NewsBriefCard({
       translationCache.current[cacheKey] = result;
       setTranslatedData(result);
     } catch (error: any) {
-      console.warn("Translation skipped");
+      console.warn("Translation skipped due to quota");
     } finally {
       setIsTranslating(false);
     }
@@ -141,7 +141,7 @@ function NewsBriefCard({
       }
     } catch (error) {
       setIsPlaying(false);
-      toast({ variant: "destructive", title: "Rate Limit", description: "Voice limit reached." });
+      toast({ variant: "destructive", title: "Rate Limit", description: "Voice limit reached. Try in 30s." });
     }
   };
 
@@ -153,7 +153,7 @@ function NewsBriefCard({
         const result = await verifyNews({ headline: brief.title });
         setVerifyData(result);
       } catch (error: any) {
-        toast({ variant: "destructive", title: "Verify Busy", description: "Wait a moment for quota reset." });
+        toast({ variant: "destructive", title: "Verify Busy", description: "AI reached its limit. Please wait." });
       } finally {
         setIsLoading(false);
       }
@@ -227,6 +227,14 @@ function NewsBriefCard({
                       <p className="text-[11px] font-bold text-primary text-center">
                         Verdict: <span className={cn(verifyData.trustScore > 70 ? "text-emerald-600" : "text-amber-600")}>{verifyData.verdict}</span>
                       </p>
+                    </div>
+                    <div className="space-y-2">
+                       <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Sources</span>
+                       {verifyData.crossReferences.slice(0, 2).map((ref, i) => (
+                         <div key={i} className="text-[9px] text-primary/60 border-l-2 border-secondary/20 pl-2 py-1">
+                           <span className="font-bold text-secondary">{ref.outlet}:</span> {ref.snippet.slice(0, 60)}...
+                         </div>
+                       ))}
                     </div>
                   </div>
                 ) : null}
@@ -365,7 +373,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
         setIsPaused(false);
       }
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Limit Reached", description: "Wait a moment for quota reset." });
+      toast({ variant: "destructive", title: "Quota Reached", description: "AI service is busy. Please wait 60s." });
     } finally {
       setIsSummarizing(false);
     }
@@ -378,8 +386,8 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       const rawResults = await fetchNews({ query, page: pageToken });
       const parsed = JSON.parse(rawResults);
       
-      if (parsed.error === "NEWS_API_KEY_MISSING") {
-        toast({ variant: "destructive", title: "API Key Missing", description: "Please add NEWS_API_KEY to your .env file." });
+      if (parsed.error && !parsed.results?.length) {
+        toast({ variant: "destructive", title: "Feed Error", description: parsed.error });
         setLoading(false);
         return;
       }
@@ -396,7 +404,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
       setBriefs(prev => pageToken ? [...prev, ...newBriefs] : newBriefs);
       setNextPageToken(parsed.nextPage || null);
     } catch (error) {
-      toast({ variant: "destructive", title: "Feed Error" });
+      toast({ variant: "destructive", title: "Feed Unavailable" });
     } finally {
       setLoading(false);
       setIsLoadingMore(false);
@@ -414,7 +422,9 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     if (onScroll) onScroll(e);
     if (showSavedOnly || loading || isLoadingMore || !nextPageToken) return;
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - scrollTop <= clientHeight + 500) fetchLiveNews(nextPageToken);
+    if (scrollHeight - scrollTop <= clientHeight + 800) {
+      fetchLiveNews(nextPageToken);
+    }
   };
 
   const currentBriefs = showSavedOnly ? savedBriefs : briefs;
@@ -464,7 +474,11 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
                 isDisabled={isPlaying || isPaused}
               />
             ))}
-            {isLoadingMore && <Skeleton className="h-40 w-full rounded-[2rem] glass col-span-2" />}
+            {isLoadingMore && (
+              <div className="col-span-1 md:col-span-2 py-8 flex justify-center">
+                 <Loader2 className="animate-spin text-primary" size={24} />
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-8 glass rounded-[2rem] text-center space-y-3">

@@ -8,6 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const TTSInputSchema = z.object({
   text: z.string(),
@@ -34,6 +35,8 @@ const ttsFlow = ai.defineFlow(
     outputSchema: TTSOutputSchema,
   },
   async (input) => {
+    // Algenib: Professional/Analytical (Male)
+    // Pherkad: Serene (Male/Neutral)
     const voiceName = input.voice === 'Vindemiatrix' ? 'Pherkad' : 'Algenib';
     
     // Prefix for Indian English accent
@@ -83,7 +86,7 @@ const ttsFlow = ai.defineFlow(
 
         if (isRateLimit && retries < maxRetries - 1) {
           retries++;
-          const delay = Math.pow(2, retries) * 1200 + Math.random() * 500;
+          const delay = Math.pow(2, retries) * 1500 + Math.random() * 500;
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
