@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
@@ -146,19 +147,25 @@ function NewsBriefCard({
   };
 
   const handleVerify = async () => {
-    if (!showVerify && !verifyData) {
+    if (showVerify) {
+      setShowVerify(false);
+      return;
+    }
+
+    setShowVerify(true);
+    if (!verifyData) {
       setIsLoading(true);
       window.dispatchEvent(new CustomEvent('ai-call'));
       try {
         const result = await verifyNews({ headline: brief.title });
         setVerifyData(result);
       } catch (error: any) {
+        setShowVerify(false);
         toast({ variant: "destructive", title: "Verify Busy", description: "AI reached its limit. Please wait." });
       } finally {
         setIsLoading(false);
       }
     }
-    setShowVerify(!showVerify);
   };
 
   const currentTitle = translatedData?.translatedTitle || brief.title;

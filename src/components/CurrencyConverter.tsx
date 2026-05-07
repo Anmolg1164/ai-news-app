@@ -30,21 +30,21 @@ export function CurrencyConverter() {
   const handleConvert = async () => {
     setLoading(true);
     try {
-      // For MVP, we use a public conversion rate API or our defined tool logic
-      const response = await fetch(`https://v6.exchangerate-api.com/v6/68e22858b76c810d79c6d4be/pair/${from}/${to}`);
+      // Updated API key provided by user
+      const response = await fetch(`https://v6.exchangerate-api.com/v6/c68b9b2a1c41abdab5e30ef8/pair/${from}/${to}`);
       const data = await response.json();
       
       if (data.result === 'success') {
         const rate = data.conversion_rate;
         setResult(parseFloat(amount) * rate);
       } else {
-        throw new Error("Rate unavailable");
+        throw new Error(data['error-type'] || "Rate unavailable");
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Conversion Error",
-        description: "Currency service temporarily unavailable.",
+        description: error.message || "Currency service temporarily unavailable.",
       });
     } finally {
       setLoading(false);
