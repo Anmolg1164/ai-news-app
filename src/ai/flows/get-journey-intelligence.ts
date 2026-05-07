@@ -6,10 +6,10 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-// Stable News Fetcher with hardcoded fallback key
+// Stable News Fetcher with your new API key
 export async function fetchNews(input: { query: string, page?: string }): Promise<string> {
   const { query, page } = input;
-  const apiKey = "pub_7015099c158564175376044710f6396e9842c";
+  const apiKey = "pub_eef749649c6f4a8aa86cc699e15042aa";
   
   try {
     let url = `https://newsdata.io/api/1/news?apikey=${apiKey}&q=${encodeURIComponent(query)}&language=en`;
@@ -22,7 +22,7 @@ export async function fetchNews(input: { query: string, page?: string }): Promis
     
     if (data.status === "error") {
       return JSON.stringify({ 
-        error: data.results?.message || "API_KEY_ERROR_OR_LIMIT", 
+        error: data.results?.message || "NEWS_API_LIMIT_OR_INVALID_KEY", 
         results: [] 
       });
     }
@@ -44,7 +44,7 @@ export async function fetchNews(input: { query: string, page?: string }): Promis
   }
 }
 
-// Keep the tool definition for AI agents to use internally if needed
+// Tool definition for AI agents
 export const searchNews = ai.defineTool(
   {
     name: 'searchNews',

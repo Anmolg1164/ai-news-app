@@ -29,7 +29,6 @@ const searchReputableNews = ai.defineTool(
     outputSchema: z.string(),
   },
   async ({ query }) => {
-    // Stable hardcoded key fallback
     const SERPER_API_KEY = "eda72dfa7cf331c0e0b4a475a679f32c7c82feed";
     const domains = "site:reuters.com OR site:bbc.com OR site:apnews.com OR site:nytimes.com OR site:aljazeera.com";
     
@@ -69,8 +68,9 @@ const verifyNewsPrompt = ai.definePrompt({
   prompt: `You are an AI Fact Checker Agent. 
   Headline: "{{headline}}"
   
-  1. Use "searchReputableNews" to find matching reports from reputable domains.
-  2. Determine a Trust Score (0-100%) based on the coverage density.
+  Instructions:
+  1. Use "searchReputableNews" to find matching reports.
+  2. Determine a Trust Score (0-100%).
   3. Extract up to 3 cross-references.
   4. Provide a verdict: "Widely Verified", "Moderately Verified", or "Limited Coverage Found".`,
 });
