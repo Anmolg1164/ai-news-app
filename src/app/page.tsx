@@ -6,7 +6,7 @@ import { Navigation } from "@/components/Navigation";
 import { GitaWisdom } from "@/components/GitaWisdom";
 import { NewsBriefs } from "@/components/NewsBriefs";
 import { CurrencyConverter } from "@/components/CurrencyConverter";
-import { MapPin, Search, ChevronDown, ArrowUp, Languages, Activity, ShieldCheck, Bookmark, BookmarkCheck } from "lucide-react";
+import { MapPin, Search, ChevronDown, ArrowUp, Languages, Activity, ShieldCheck, Bookmark, BookmarkCheck, Sparkles, X } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -20,10 +20,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const COUNTRIES = [
   { code: "in", name: "India" },
@@ -53,6 +55,7 @@ export default function Home() {
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [intelligenceOpen, setIntelligenceOpen] = useState(false);
   
   const [aiUsage, setAiUsage] = useState(0);
   const { toast } = useToast();
@@ -111,6 +114,28 @@ export default function Home() {
   };
 
   if (!isMounted) return null;
+
+  const GuptaEngineStatus = ({ isMobile = false }: { isMobile?: boolean }) => (
+    <div className={cn(
+      "p-4 lg:p-6 rounded-[2rem] lg:rounded-[2.5rem] glass-dark text-white space-y-3 lg:space-y-4 relative overflow-hidden group hover:glow-secondary transition-all duration-500",
+      isMobile && "mt-4"
+    )}>
+      <div className="absolute -top-10 -right-10 w-48 h-48 bg-secondary/30 rounded-full blur-[80px] group-hover:scale-150 transition-all duration-1000" />
+      <h3 className="flex items-center gap-3 font-headline font-bold text-lg lg:text-xl">
+        Gupta Engine
+      </h3>
+      <p className="text-xs lg:text-sm opacity-80 leading-relaxed font-medium">
+        Browsing <span className="text-secondary font-bold tracking-tight">{activeCountry.name}</span> in <span className="text-secondary font-bold tracking-tight">{activeLanguage.name}</span>.
+      </p>
+      <div className="space-y-2 pt-1 lg:pt-2">
+        <div className="flex justify-between text-[8px] lg:text-[10px] font-bold uppercase opacity-40">
+          <span>Minute Capacity</span>
+          <span>{100 - aiUsage}% Available</span>
+        </div>
+        <Progress value={100 - aiUsage} className="h-1 bg-white/10" />
+      </div>
+    </div>
+  );
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden relative" suppressHydrationWarning>
@@ -245,23 +270,7 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 h-full py-2 lg:py-4">
           <aside className="hidden lg:block lg:col-span-4 space-y-4 lg:space-y-6 overflow-y-auto pr-0 lg:pr-2 custom-scrollbar animate-in fade-in slide-in-from-left-10 duration-1000 pb-24 lg:pb-0">
             <GitaWisdom />
-            
-            <div className="p-4 lg:p-6 rounded-[2rem] lg:rounded-[2.5rem] glass-dark text-white space-y-3 lg:space-y-4 relative overflow-hidden group hover:glow-secondary transition-all duration-500">
-              <div className="absolute -top-10 -right-10 w-48 h-48 bg-secondary/30 rounded-full blur-[80px] group-hover:scale-150 transition-all duration-1000" />
-              <h3 className="flex items-center gap-3 font-headline font-bold text-lg lg:text-xl">
-                Gupta Engine
-              </h3>
-              <p className="text-xs lg:text-sm opacity-80 leading-relaxed font-medium">
-                Browsing <span className="text-secondary font-bold tracking-tight">{activeCountry.name}</span> in <span className="text-secondary font-bold tracking-tight">{activeLanguage.name}</span>.
-              </p>
-              <div className="space-y-2 pt-1 lg:pt-2">
-                <div className="flex justify-between text-[8px] lg:text-[10px] font-bold uppercase opacity-40">
-                  <span>Minute Capacity</span>
-                  <span>{100 - aiUsage}% Available</span>
-                </div>
-                <Progress value={100 - aiUsage} className="h-1 bg-white/10" />
-              </div>
-            </div>
+            <GuptaEngineStatus />
           </aside>
 
           <section className="lg:col-span-8 h-full overflow-hidden flex flex-col relative">
@@ -276,34 +285,6 @@ export default function Home() {
             />
             
             <div className="absolute bottom-6 left-0 right-0 px-4 flex flex-col items-center gap-4 pointer-events-none z-50">
-              <div className="lg:hidden w-full max-w-[95vw] pointer-events-auto animate-in slide-in-from-bottom-10 duration-1000">
-                <Carousel className="w-full">
-                  <CarouselContent className="-ml-2">
-                    <CarouselItem className="pl-2 basis-[85%]">
-                      <GitaWisdom />
-                    </CarouselItem>
-                    <CarouselItem className="pl-2 basis-[85%]">
-                      <div className="p-4 rounded-[2rem] glass-dark text-white space-y-3 relative overflow-hidden h-full">
-                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-secondary/20 rounded-full blur-3xl" />
-                        <h3 className="flex items-center gap-2 font-headline font-bold text-sm">
-                          Gupta Engine
-                        </h3>
-                        <p className="text-[10px] opacity-80 leading-tight">
-                          Monitoring <span className="text-secondary font-bold">{activeCountry.name}</span> in {activeLanguage.name}.
-                        </p>
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-[8px] font-bold uppercase opacity-40">
-                            <span>RPM Capacity</span>
-                            <span>{100 - aiUsage}%</span>
-                          </div>
-                          <Progress value={100 - aiUsage} className="h-1 bg-white/10" />
-                        </div>
-                      </div>
-                    </CarouselItem>
-                  </CarouselContent>
-                </Carousel>
-              </div>
-              
               <div className="pointer-events-auto">
                 <Navigation onCategoryClick={handleCategoryClick} activeCategory={activeCategory} />
               </div>
@@ -311,6 +292,31 @@ export default function Home() {
           </section>
         </div>
       </main>
+
+      {/* Mobile Intelligence Hub Trigger */}
+      <div className="lg:hidden fixed bottom-24 left-6 z-50 pointer-events-auto">
+        <Sheet open={intelligenceOpen} onOpenChange={setIntelligenceOpen}>
+          <SheetTrigger asChild>
+            <button className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-accent text-white flex items-center justify-center shadow-[0_8px_32px_rgba(262,83,58,0.4)] animate-float active:scale-95 transition-all">
+              <Sparkles size={20} />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="h-[80vh] rounded-t-[3rem] glass-dark border-primary/20 p-6 overflow-y-auto custom-scrollbar">
+            <SheetHeader className="mb-6 flex flex-row items-center justify-between">
+              <SheetTitle className="text-2xl font-headline font-bold text-secondary">
+                Intelligence Hub
+              </SheetTitle>
+              <button onClick={() => setIntelligenceOpen(false)} className="p-2 rounded-full hover:bg-white/10 text-white/40">
+                <X size={24} />
+              </button>
+            </SheetHeader>
+            <div className="space-y-6">
+              <GitaWisdom />
+              <GuptaEngineStatus isMobile />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
 
       <button
         onClick={scrollToTop}
