@@ -19,6 +19,11 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 
 const COUNTRIES = [
   { code: "in", name: "India" },
@@ -49,7 +54,6 @@ export default function Home() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   
-  // Quota Monitoring (Requests Per Minute tracking)
   const [aiUsage, setAiUsage] = useState(0);
   const { toast } = useToast();
   
@@ -66,14 +70,13 @@ export default function Home() {
     }
   }, []);
 
-  // Track AI calls and implement "auto-recovery" (mimics 60s RPM reset)
   useEffect(() => {
     const handleAiCall = () => setAiUsage(prev => Math.min(prev + 8, 100));
     window.addEventListener('ai-call', handleAiCall);
 
     const recoveryInterval = setInterval(() => {
       setAiUsage(prev => Math.max(0, prev - 5));
-    }, 3000); // Recover 5% every 3 seconds (100% in 60s)
+    }, 3000);
 
     return () => {
       window.removeEventListener('ai-call', handleAiCall);
@@ -240,7 +243,7 @@ export default function Home() {
 
       <main className="flex-1 overflow-hidden container mx-auto px-4 md:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 h-full py-2 lg:py-4">
-          <aside className="lg:col-span-4 space-y-4 lg:space-y-6 overflow-y-auto pr-0 lg:pr-2 custom-scrollbar order-2 lg:order-1 max-h-[40vh] lg:max-h-full animate-in fade-in slide-in-from-left-10 duration-1000 pb-24 lg:pb-0">
+          <aside className="hidden lg:block lg:col-span-4 space-y-4 lg:space-y-6 overflow-y-auto pr-0 lg:pr-2 custom-scrollbar animate-in fade-in slide-in-from-left-10 duration-1000 pb-24 lg:pb-0">
             <GitaWisdom />
             
             <div className="p-4 lg:p-6 rounded-[2rem] lg:rounded-[2.5rem] glass-dark text-white space-y-3 lg:space-y-4 relative overflow-hidden group hover:glow-secondary transition-all duration-500">
@@ -261,7 +264,7 @@ export default function Home() {
             </div>
           </aside>
 
-          <section className="lg:col-span-8 h-full overflow-hidden flex flex-col relative order-1 lg:order-2">
+          <section className="lg:col-span-8 h-full overflow-hidden flex flex-col relative">
             <NewsBriefs 
               category={activeCategory} 
               searchQuery={searchQuery}
@@ -272,7 +275,35 @@ export default function Home() {
               ref={newsScrollRef}
             />
             
-            <div className="absolute bottom-6 left-0 right-0 px-4 flex justify-center pointer-events-none z-50">
+            <div className="absolute bottom-6 left-0 right-0 px-4 flex flex-col items-center gap-4 pointer-events-none z-50">
+              <div className="lg:hidden w-full max-w-[95vw] pointer-events-auto animate-in slide-in-from-bottom-10 duration-1000">
+                <Carousel className="w-full">
+                  <CarouselContent className="-ml-2">
+                    <CarouselItem className="pl-2 basis-[85%]">
+                      <GitaWisdom />
+                    </CarouselItem>
+                    <CarouselItem className="pl-2 basis-[85%]">
+                      <div className="p-4 rounded-[2rem] glass-dark text-white space-y-3 relative overflow-hidden h-full">
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-secondary/20 rounded-full blur-3xl" />
+                        <h3 className="flex items-center gap-2 font-headline font-bold text-sm">
+                          Gupta Engine
+                        </h3>
+                        <p className="text-[10px] opacity-80 leading-tight">
+                          Monitoring <span className="text-secondary font-bold">{activeCountry.name}</span> in {activeLanguage.name}.
+                        </p>
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[8px] font-bold uppercase opacity-40">
+                            <span>RPM Capacity</span>
+                            <span>{100 - aiUsage}%</span>
+                          </div>
+                          <Progress value={100 - aiUsage} className="h-1 bg-white/10" />
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  </CarouselContent>
+                </Carousel>
+              </div>
+              
               <div className="pointer-events-auto">
                 <Navigation onCategoryClick={handleCategoryClick} activeCategory={activeCategory} />
               </div>
