@@ -112,49 +112,48 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden relative" suppressHydrationWarning>
       <header className="z-40 glass border-b border-white/40 flex-shrink-0" suppressHydrationWarning>
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-gradient-to-tr from-primary to-secondary rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-xl shadow-primary/30 group-hover:rotate-6 transition-all duration-500 cursor-pointer relative overflow-hidden">
+        <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 md:gap-3 group">
+            <div className="w-9 h-9 md:w-10 md:h-10 bg-gradient-to-tr from-primary to-secondary rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-xl shadow-primary/30 group-hover:rotate-6 transition-all duration-500 cursor-pointer relative overflow-hidden">
                <Image 
-                src="https://picsum.photos/seed/user_profile/400/400" 
+                src="https://picsum.photos/seed/gupta_intel/400/400" 
                 alt="Logo" 
                 fill
                 className="object-cover"
-                data-ai-hint="user logo"
+                data-ai-hint="luxury logo"
               />
             </div>
-            <div>
-              <h1 className="text-xl font-headline font-bold text-primary tracking-tighter leading-none">
+            <div className="hidden sm:block">
+              <h1 className="text-lg md:text-xl font-headline font-bold text-primary tracking-tighter leading-none">
                 G newsMola
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[7px] uppercase tracking-[0.4em] font-bold text-muted-foreground opacity-60">
-                  Dharma Intelligence
+                  Gupta Intelligence
                 </span>
               </div>
             </div>
           </div>
           
-          <div className="hidden lg:flex flex-1 max-w-xl mx-8 gap-4">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-all" size={16} />
+          <div className="flex-1 max-w-xl flex items-center gap-2 md:gap-4">
+            <div className="relative flex-1 group hidden md:block">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-all" size={14} />
               <input 
                 type="text" 
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                placeholder="Search the globe..." 
-                className="w-full bg-white/50 border border-primary/10 rounded-full py-2 pl-10 pr-4 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:bg-white transition-all shadow-sm font-medium text-xs"
+                placeholder="Search news..." 
+                className="w-full bg-white/50 border border-primary/10 rounded-full py-2 pl-10 pr-4 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:bg-white transition-all shadow-sm font-medium text-[10px]"
               />
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 md:gap-2 ml-auto md:ml-0">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl border-white/60 bg-white/50 gap-2 h-9 px-3 hover:bg-white shadow-sm transition-all">
-                    <MapPin size={14} className="text-secondary" />
-                    <span className="text-[10px] font-bold tracking-tight">{activeCountry.name}</span>
-                    <ChevronDown size={10} className="opacity-40" />
+                  <Button variant="outline" className="rounded-xl border-white/60 bg-white/50 gap-1.5 h-8 md:h-9 px-2 md:px-3 hover:bg-white shadow-sm transition-all">
+                    <MapPin size={12} className="text-secondary" />
+                    <span className="text-[9px] md:text-[10px] font-bold tracking-tight hidden xs:inline">{activeCountry.name}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="glass border-white/60 min-w-[150px] p-1 rounded-xl">
@@ -172,10 +171,9 @@ export default function Home() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl border-white/60 bg-white/50 gap-2 h-9 px-3 hover:bg-white shadow-sm transition-all">
-                    <Languages size={14} className="text-accent" />
-                    <span className="text-[10px] font-bold tracking-tight">{activeLanguage.name}</span>
-                    <ChevronDown size={10} className="opacity-40" />
+                  <Button variant="outline" className="rounded-xl border-white/60 bg-white/50 gap-1.5 h-8 md:h-9 px-2 md:px-3 hover:bg-white shadow-sm transition-all">
+                    <Languages size={12} className="text-accent" />
+                    <span className="text-[9px] md:text-[10px] font-bold tracking-tight hidden xs:inline">{activeLanguage.name}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="glass border-white/60 min-w-[150px] p-1 rounded-xl">
@@ -193,17 +191,17 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 md:gap-3">
             <CurrencyConverter />
             
             <Popover>
               <PopoverTrigger asChild>
-                <button className="relative group p-2 rounded-xl hover:bg-white/60 transition-all text-muted-foreground">
-                  <Activity size={20} className={cn(aiUsage > 70 ? "text-accent animate-pulse" : "group-hover:text-primary")} />
-                  {aiUsage > 20 && <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-primary rounded-full" />}
+                <button className="relative group p-1.5 md:p-2 rounded-xl hover:bg-white/60 transition-all text-muted-foreground">
+                  <Activity size={18} className={cn(aiUsage > 70 ? "text-accent animate-pulse" : "group-hover:text-primary")} />
+                  {aiUsage > 20 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-primary rounded-full" />}
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="glass border-primary/20 w-64 p-4 z-50 shadow-2xl">
+              <PopoverContent className="glass border-primary/20 w-64 p-4 z-50 shadow-2xl" side="bottom" align="end">
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-2">
                     <Activity size={12} /> Rate-Limit Monitor
@@ -232,29 +230,29 @@ export default function Home() {
             <button 
               onClick={() => setShowSavedOnly(!showSavedOnly)}
               title={showSavedOnly ? "Show All News" : "Show Saved News"}
-              className={cn("w-9 h-9 rounded-xl flex items-center justify-center transition-all border-2 border-white shadow-xl hover:scale-105", showSavedOnly ? "bg-accent/20 border-accent/20" : "bg-white")}
+              className={cn("w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center transition-all border-2 border-white shadow-xl hover:scale-105", showSavedOnly ? "bg-accent/20 border-accent/20" : "bg-white")}
             >
-              {showSavedOnly ? <BookmarkCheck size={18} className="text-accent" /> : <Bookmark size={18} className="text-primary" />}
+              {showSavedOnly ? <BookmarkCheck size={16} className="text-accent" /> : <Bookmark size={16} className="text-primary" />}
             </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 overflow-hidden container mx-auto px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full py-4">
-          <aside className="lg:col-span-4 space-y-6 overflow-y-auto pr-2 custom-scrollbar hidden lg:block animate-in fade-in slide-in-from-left-10 duration-1000">
+      <main className="flex-1 overflow-hidden container mx-auto px-4 md:px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 h-full py-2 lg:py-4">
+          <aside className="lg:col-span-4 space-y-4 lg:space-y-6 overflow-y-auto pr-0 lg:pr-2 custom-scrollbar order-2 lg:order-1 max-h-[40vh] lg:max-h-full animate-in fade-in slide-in-from-left-10 duration-1000 pb-24 lg:pb-0">
             <GitaWisdom />
             
-            <div className="p-6 rounded-[2.5rem] glass-dark text-white space-y-4 relative overflow-hidden group hover:glow-secondary transition-all duration-500">
+            <div className="p-4 lg:p-6 rounded-[2rem] lg:rounded-[2.5rem] glass-dark text-white space-y-3 lg:space-y-4 relative overflow-hidden group hover:glow-secondary transition-all duration-500">
               <div className="absolute -top-10 -right-10 w-48 h-48 bg-secondary/30 rounded-full blur-[80px] group-hover:scale-150 transition-all duration-1000" />
-              <h3 className="flex items-center gap-3 font-headline font-bold text-xl">
-                Regional Engine
+              <h3 className="flex items-center gap-3 font-headline font-bold text-lg lg:text-xl">
+                Gupta Engine
               </h3>
-              <p className="text-sm opacity-80 leading-relaxed font-medium">
+              <p className="text-xs lg:text-sm opacity-80 leading-relaxed font-medium">
                 Browsing <span className="text-secondary font-bold tracking-tight">{activeCountry.name}</span> in <span className="text-secondary font-bold tracking-tight">{activeLanguage.name}</span>.
               </p>
-              <div className="space-y-2 pt-2">
-                <div className="flex justify-between text-[10px] font-bold uppercase opacity-40">
+              <div className="space-y-2 pt-1 lg:pt-2">
+                <div className="flex justify-between text-[8px] lg:text-[10px] font-bold uppercase opacity-40">
                   <span>Minute Capacity</span>
                   <span>{100 - aiUsage}% Available</span>
                 </div>
@@ -263,7 +261,7 @@ export default function Home() {
             </div>
           </aside>
 
-          <section className="lg:col-span-8 h-full overflow-hidden flex flex-col relative bento-card">
+          <section className="lg:col-span-8 h-full overflow-hidden flex flex-col relative order-1 lg:order-2">
             <NewsBriefs 
               category={activeCategory} 
               searchQuery={searchQuery}
@@ -274,7 +272,7 @@ export default function Home() {
               ref={newsScrollRef}
             />
             
-            <div className="absolute bottom-6 left-0 right-0 px-4 flex justify-center pointer-events-none">
+            <div className="absolute bottom-6 left-0 right-0 px-4 flex justify-center pointer-events-none z-50">
               <div className="pointer-events-auto">
                 <Navigation onCategoryClick={handleCategoryClick} activeCategory={activeCategory} />
               </div>
@@ -286,11 +284,11 @@ export default function Home() {
       <button
         onClick={scrollToTop}
         className={cn(
-          "fixed bottom-24 right-12 p-4 rounded-xl bg-primary text-white shadow-2xl transition-all duration-700 z-50 hover:scale-110 active:scale-90",
+          "fixed bottom-24 right-6 md:right-12 p-3 md:p-4 rounded-xl bg-primary text-white shadow-2xl transition-all duration-700 z-50 hover:scale-110 active:scale-90",
           showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-32 pointer-events-none"
         )}
       >
-        <ArrowUp size={24} />
+        <ArrowUp size={20} />
       </button>
     </div>
   );

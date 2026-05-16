@@ -26,7 +26,7 @@ export function Navigation({ onCategoryClick, activeCategory }: NavigationProps)
   };
 
   return (
-    <nav className="flex items-center gap-2 p-2 rounded-[2rem] glass z-50 shadow-2xl border-white/60 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+    <nav className="flex items-center gap-1 md:gap-2 p-1.5 md:p-2 rounded-[2rem] glass z-50 shadow-2xl border-white/60 animate-in fade-in slide-in-from-bottom-6 duration-1000 max-w-[95vw] overflow-x-auto no-scrollbar">
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = activeCategory === item.label;
@@ -36,16 +36,16 @@ export function Navigation({ onCategoryClick, activeCategory }: NavigationProps)
             key={item.label}
             onClick={(e) => handleClick(item.label, e)}
             className={cn(
-              "flex items-center gap-2 py-2 px-4 rounded-[1.5rem] transition-all duration-500 group relative",
+              "flex items-center gap-1.5 md:gap-2 py-1.5 md:py-2 px-3 md:px-4 rounded-[1.5rem] transition-all duration-500 group relative whitespace-nowrap",
               isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-white/60"
             )}
           >
-            <Icon size={18} className={cn(
+            <Icon size={16} className={cn(
               "transition-all duration-500",
               isActive ? "text-primary" : "group-hover:text-primary"
             )} />
             <span className={cn(
-              "text-[10px] font-bold uppercase tracking-[0.1em] transition-all duration-500",
+              "text-[9px] md:text-[10px] font-bold uppercase tracking-[0.1em] transition-all duration-500",
               isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100"
             )}>
               {item.label}

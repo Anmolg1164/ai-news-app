@@ -319,7 +319,10 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     if (saved) setSavedBriefs(JSON.parse(saved));
     
     const handleGlobalStop = () => {
-      if (audioRef.current) audioRef.current.pause();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
       setIsPlaying(false);
       setIsPaused(false);
     };
@@ -333,6 +336,14 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
     setSavedBriefs(updated);
     localStorage.setItem("savedNews", JSON.stringify(updated));
     toast({ title: isAlreadySaved ? "Removed from Library" : "Added to Library" });
+  };
+
+  const handleStop = () => {
+    if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
+      (window as any).stopAllAudio();
+    }
+    setIsPlaying(false);
+    setIsPaused(false);
   };
 
   const handleBriefingControl = async () => {
@@ -439,13 +450,13 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
   return (
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-10 duration-1000">
       <audio ref={audioRef} onEnded={() => { setIsPlaying(false); setIsPaused(false); }} className="hidden" />
-      <div className="flex flex-row items-center justify-between gap-4 px-4 py-3 flex-shrink-0 bg-background/40 backdrop-blur-xl border-b border-primary/5">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 px-4 py-3 flex-shrink-0 bg-background/40 backdrop-blur-xl border-b border-primary/5">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
             <Globe size={16} />
           </div>
           <div>
-            <h2 className="text-lg font-headline font-bold text-primary tracking-tight">
+            <h2 className="text-base md:text-lg font-headline font-bold text-primary tracking-tight">
               {showSavedOnly ? "Library" : searchQuery ? `"${searchQuery}"` : `${category} Feed`}
             </h2>
             <div className="flex items-center gap-1.5">
@@ -454,15 +465,27 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
             </div>
           </div>
         </div>
-        <Button 
-          onClick={handleBriefingControl}
-          disabled={isSummarizing || isResetting || (loading && !showSavedOnly)}
-          size="sm"
-          className="rounded-xl bg-gradient-to-r from-primary to-secondary text-white hover:scale-105 transition-all gap-1.5 h-10 px-4"
-        >
-          {isSummarizing || isResetting ? <Loader2 className="animate-spin" size={14} /> : isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-          <span className="text-[10px] font-bold uppercase">{isPaused ? "Resume" : isPlaying ? "Pause" : "AI Insight"}</span>
-        </Button>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <Button 
+            onClick={handleBriefingControl}
+            disabled={isSummarizing || isResetting || (loading && !showSavedOnly)}
+            size="sm"
+            className="flex-1 md:flex-none rounded-xl bg-gradient-to-r from-primary to-secondary text-white hover:scale-105 transition-all gap-1.5 h-9 md:h-10 px-3 md:px-4"
+          >
+            {isSummarizing || isResetting ? <Loader2 className="animate-spin" size={14} /> : isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+            <span className="text-[10px] font-bold uppercase">{isPaused ? "Resume" : isPlaying ? "Pause" : "AI Insight"}</span>
+          </Button>
+          {(isPlaying || isPaused) && (
+            <Button
+              onClick={handleStop}
+              variant="outline"
+              size="icon"
+              className="rounded-xl border-accent/20 text-accent hover:bg-accent/5 h-9 w-9 md:h-10 md:w-10"
+            >
+              <Square size={14} fill="currentColor" />
+            </Button>
+          )}
+        </div>
       </div>
       <div ref={ref} onScroll={handleInternalScroll} className="flex-1 overflow-y-auto custom-scrollbar px-3 pt-4 pb-32">
         {loading && !showSavedOnly && briefs.length === 0 ? (
