@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { interpretGitaVerse, type InterpretGitaVerseOutput } from "@/ai/flows/interpret-gita-verse";
 import { translateVerse, type TranslateVerseOutput } from "@/ai/flows/translate-verse";
-import { textToSpeech } from "@/ai/flows/tts-flow";
+import { speakText, stopBrowserSpeech } from "@/lib/browser-speech";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import gitaData from "@/app/lib/gita-verses.json";
@@ -45,11 +45,9 @@ export function GitaWisdom() {
   const [loading, setLoading] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isVoiceLoading, setIsVoiceLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   
   const translationCache = useRef<Record<string, TranslateVerseOutput>>({});
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
   const verses = gitaData.verses;
@@ -59,16 +57,16 @@ export function GitaWisdom() {
     const today = new Date();
     const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
     setVerseIndex(dayOfYear % verses.length);
+
+    // Warm up voices
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+    }
   }, [verses.length]);
 
   const forceCleanup = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-      audioRef.current.load();
-    }
+    stopBrowserSpeech();
     setIsPlaying(false);
-    setIsVoiceLoading(false);
   };
 
   useEffect(() => {
@@ -132,52 +130,24 @@ export function GitaWisdom() {
     }
   };
 
-  const handlePlayAudio = async () => {
-    if (isPlaying || isVoiceLoading) {
+  const handlePlayAudio = () => {
+    if (isPlaying) {
       forceCleanup();
       return;
     }
 
+    // Silence others
     if (typeof window !== 'undefined' && (window as any).stopAllAudio) {
       (window as any).stopAllAudio();
     }
     
     setIsResetting(true);
-    // Cooldown
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setIsResetting(false);
-
-    const textToRead = translation ? translation.translatedVerse : currentVerse.english;
-    
-    setIsVoiceLoading(true);
-    try {
-      const { media } = await textToSpeech({ 
-        text: textToRead, 
-        voice: 'Vindemiatrix',
-        style: 'serene'
-      });
-      
-      if (audioRef.current) {
-        audioRef.current.src = media;
-        audioRef.current.play()
-          .then(() => {
-            setIsPlaying(true);
-            setIsVoiceLoading(false);
-          })
-          .catch(() => {
-            setIsPlaying(false);
-            setIsVoiceLoading(false);
-          });
-      }
-    } catch (error: any) {
-      setIsPlaying(false);
-      setIsVoiceLoading(false);
-      toast({
-        variant: "destructive",
-        title: "Voice Service Busy",
-        description: "Gemini TTS is waiting for quota reset. Try in 30 seconds.",
-      });
-    }
+    setTimeout(() => {
+      setIsResetting(false);
+      const textToRead = translation ? translation.translatedVerse : currentVerse.english;
+      setIsPlaying(true);
+      speakText(textToRead, () => setIsPlaying(false));
+    }, 300);
   };
 
   const nextVerse = () => {
@@ -195,16 +165,6 @@ export function GitaWisdom() {
       "parchment overflow-hidden border-none transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
       "relative group"
     )}>
-      <audio 
-        ref={audioRef} 
-        onEnded={() => setIsPlaying(false)} 
-        onError={() => {
-          setIsPlaying(false);
-          setIsVoiceLoading(false);
-        }}
-        className="hidden" 
-      />
-      
       <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
         <ScrollText size={80} />
       </div>
@@ -261,10 +221,10 @@ export function GitaWisdom() {
                 onClick={handlePlayAudio}
                 className={cn(
                   "h-8 w-8 text-[#b4945e] hover:bg-[#eee1c5] transition-all rounded-full",
-                  (isPlaying || isVoiceLoading || isResetting) && "bg-secondary/20 text-secondary animate-pulse"
+                  (isPlaying || isResetting) && "bg-secondary/20 text-secondary animate-pulse"
                 )}
               >
-                {isResetting ? <Loader2 size={14} className="animate-spin" /> : isVoiceLoading ? <Loader2 size={14} className="animate-spin" /> : isPlaying ? <Square size={14} fill="currentColor" /> : <Volume2 size={14} />}
+                {isResetting ? <Loader2 size={14} className="animate-spin" /> : isPlaying ? <Square size={14} fill="currentColor" /> : <Volume2 size={14} />}
               </Button>
             </div>
             <p className="text-sm text-[#5c4b37]/90 leading-relaxed font-serif">
