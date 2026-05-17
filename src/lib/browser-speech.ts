@@ -3,12 +3,15 @@
 
 /**
  * @fileOverview Client-side utility for the Web Speech API (speechSynthesis).
- * Optimized for Indian English accents and global audio control.
+ * Uses standard locale tags for device-agnostic voice selection across all browsers.
  */
 
-// Keep a reference to the utterance to prevent garbage collection issues
+// Keep a reference to the utterance to prevent garbage collection issues on long texts
 let currentUtterance: SpeechSynthesisUtterance | null = null;
 
+/**
+ * Stops any ongoing speech synthesis and clears the active utterance.
+ */
 export const stopBrowserSpeech = () => {
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     window.speechSynthesis.cancel();
@@ -16,13 +19,20 @@ export const stopBrowserSpeech = () => {
   }
 };
 
+/**
+ * Speaks the provided text using the browser's native Speech Synthesis API.
+ * Prioritizes Indian English (en-IN) without hardcoding specific voice names.
+ * 
+ * @param text - The string to read aloud.
+ * @param onEnd - Optional callback triggered when speech completes.
+ */
 export const speakText = (text: string, onEnd?: () => void) => {
   if (typeof window === 'undefined' || !window.speechSynthesis) {
     console.warn("Speech synthesis not supported in this browser");
     return;
   }
 
-  // Stop any current speech before starting new one
+  // Ensure any previous speech is terminated before starting new one
   stopBrowserSpeech();
 
   if (!text || text.trim() === "") {
@@ -33,9 +43,16 @@ export const speakText = (text: string, onEnd?: () => void) => {
   const utterance = new SpeechSynthesisUtterance(text);
   currentUtterance = utterance;
   
-  // Find an Indian English voice
+  // Fetch available voices - handle browsers where this might be empty initially
   const voices = window.speechSynthesis.getVoices();
-  const indianVoice = voices.find(v => v.lang === 'en-IN' || v.name.toLowerCase().includes('india')) || 
+  
+  /**
+   * Selection Strategy:
+   * 1. Find a voice matching the 'en-IN' (Indian English) locale exactly.
+   * 2. Fallback to any voice starting with 'en' (English).
+   * 3. Fallback to the browser's default voice.
+   */
+  const indianVoice = voices.find(v => v.lang === 'en-IN' || v.lang === 'en_IN') || 
                       voices.find(v => v.lang.startsWith('en')) || 
                       voices[0];
 
@@ -43,8 +60,9 @@ export const speakText = (text: string, onEnd?: () => void) => {
     utterance.voice = indianVoice;
   }
 
+  // Consistent pacing for news and spiritual content
   utterance.pitch = 1.0;
-  utterance.rate = 0.95; // Slightly slower for better clarity
+  utterance.rate = 0.92; // Slightly slower for better clarity on device speakers
   utterance.volume = 1.0;
 
   utterance.onend = () => {
@@ -53,9 +71,10 @@ export const speakText = (text: string, onEnd?: () => void) => {
   };
 
   utterance.onerror = (event) => {
-    // Interrupted or Canceled are normal when switching audio; ignore them to prevent dev-mode overlays
-    if (event.error !== 'interrupted' && event.error !== 'canceled') {
-      console.warn("SpeechSynthesis non-fatal issue:", event.error);
+    // 'interrupted' and 'canceled' are common when a user clicks a new button; we ignore these.
+    const ignoredErrors = ['interrupted', 'canceled'];
+    if (!ignoredErrors.includes(event.error)) {
+      console.warn("SpeechSynthesis issue:", event.error);
     }
     currentUtterance = null;
     if (onEnd) onEnd();
