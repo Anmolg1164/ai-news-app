@@ -94,13 +94,15 @@ export function GitaWisdom() {
 
   const handleLanguageChange = async (lang: string) => {
     if (isTranslating) return;
-    setSelectedLanguage(lang);
     
+    // Explicitly handle revert to English
     if (lang === "English") {
+      setSelectedLanguage("English");
       setTranslation(null);
       return;
     }
 
+    setSelectedLanguage(lang);
     const cacheKey = `${verseIndex}-${lang}`;
     if (translationCache.current[cacheKey]) {
       setTranslation(translationCache.current[cacheKey]);
@@ -125,6 +127,7 @@ export function GitaWisdom() {
         description: "Quota limit reached. Reverting to English.",
       });
       setSelectedLanguage("English");
+      setTranslation(null);
     } finally {
       setIsTranslating(false);
     }

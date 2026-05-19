@@ -89,12 +89,19 @@ function NewsBriefCard({
     }
   }, [brief.id, brief.title, brief.content]);
 
+  // Handle reactive language switching
   useEffect(() => {
-    if (isVisible && language !== "English" && !translatedData && !isTranslating) {
-      const timer = setTimeout(() => handleTranslation(language), 1500);
-      return () => clearTimeout(timer);
+    if (language === "English") {
+      setTranslatedData(null);
+    } else if (isVisible && !isTranslating) {
+      // Check if we already have the correct translation showing
+      const cacheKey = `${brief.id}-${language}`;
+      if (!translatedData || translationCache.current[cacheKey] !== translatedData) {
+        const timer = setTimeout(() => handleTranslation(language), 800);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [isVisible, language, translatedData, isTranslating, handleTranslation]);
+  }, [isVisible, language, handleTranslation, brief.id, isTranslating, translatedData]);
 
   useEffect(() => {
     const handleGlobalStop = () => setIsPlaying(false);
