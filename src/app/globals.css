@@ -44,12 +44,15 @@
   }
 }
 
-/* Hide Google Translate UI */
+/* Hide Google Translate UI Elements */
 .goog-te-banner-frame.skiptranslate,
 .goog-te-gadget-icon,
 .goog-te-gadget-simple span,
 .goog-te-menu-value span:nth-child(3),
-.goog-te-menu-frame.skiptranslate {
+.goog-te-menu-frame.skiptranslate,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.goog-te-spinner-pos {
   display: none !important;
 }
 

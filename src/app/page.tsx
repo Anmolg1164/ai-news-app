@@ -39,10 +39,12 @@ const LANGUAGES = [
   { code: "en", name: "English" },
   { code: "hi", name: "Hindi" },
   { code: "or", name: "Odia" },
-  { code: "bh", name: "Bhojpuri" },
+  { code: "bho", name: "Bhojpuri" },
   { code: "pa", name: "Punjabi" },
   { code: "bn", name: "Bengali" },
   { code: "gu", name: "Gujarati" },
+  { code: "es", name: "Spanish" },
+  { code: "fr", name: "French" },
 ];
 
 export default function Home() {
@@ -102,14 +104,14 @@ export default function Home() {
   const handleLanguageChange = (lang: typeof LANGUAGES[0]) => {
     setActiveLanguage(lang);
     
-    // Trigger Google Translate Widget
+    // Trigger Google Translate Widget Programmatically
     if (typeof window !== 'undefined') {
       const googleCombo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
       if (googleCombo) {
         googleCombo.value = lang.code;
         googleCombo.dispatchEvent(new Event('change'));
       } else {
-        // Fallback for when the widget isn't ready
+        // Fallback for when the widget isn't ready in the DOM yet
         setTimeout(() => {
            const retryCombo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
            if (retryCombo) {
