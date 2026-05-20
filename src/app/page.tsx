@@ -106,18 +106,24 @@ export default function Home() {
     
     // Trigger Google Translate Widget Programmatically
     if (typeof window !== 'undefined') {
-      const googleCombo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
-      if (googleCombo) {
-        googleCombo.value = lang.code;
-        googleCombo.dispatchEvent(new Event('change'));
-      } else {
+      const triggerTranslate = () => {
+        const googleCombo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+        if (googleCombo) {
+          googleCombo.value = lang.code;
+          googleCombo.dispatchEvent(new Event('change', { bubbles: true }));
+          return true;
+        }
+        return false;
+      };
+
+      if (!triggerTranslate()) {
         // Fallback for when the widget isn't ready in the DOM yet
-        setTimeout(() => {
-           const retryCombo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
-           if (retryCombo) {
-             retryCombo.value = lang.code;
-             retryCombo.dispatchEvent(new Event('change'));
-           }
+        let attempts = 0;
+        const interval = setInterval(() => {
+          attempts++;
+          if (triggerTranslate() || attempts > 10) {
+            clearInterval(interval);
+          }
         }, 500);
       }
     }

@@ -24,12 +24,15 @@ export default function RootLayout({
           strategy="afterInteractive"
         >{`
           function googleTranslateElementInit() {
-            new google.translate.TranslateElement({
-              pageLanguage: 'en',
-              layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-              autoDisplay: false
-            }, 'google_translate_element');
+            if (window.google && window.google.translate) {
+              new window.google.translate.TranslateElement({
+                pageLanguage: 'en',
+                layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+              }, 'google_translate_element');
+            }
           }
+          window.googleTranslateElementInit = googleTranslateElementInit;
         `}</Script>
         <Script
           src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
