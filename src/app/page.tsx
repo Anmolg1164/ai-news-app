@@ -65,6 +65,20 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
+    
+    // Define the global init function Google looks for
+    (window as any).googleTranslateElementInit = () => {
+      new (window as any).google.translate.TranslateElement(
+        {
+          pageLanguage: 'en',
+          includedLanguages: 'en,hi,or,bho,pa,bn,gu,es,fr',
+          layout: (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE,
+          autoDisplay: false,
+        },
+        'google_translate_element'
+      );
+    };
+
     if (typeof window !== 'undefined') {
       (window as any).stopAllAudio = () => {
         const audios = document.querySelectorAll('audio');
@@ -104,28 +118,19 @@ export default function Home() {
   const handleLanguageChange = (lang: typeof LANGUAGES[0]) => {
     setActiveLanguage(lang);
     
-    // Trigger Google Translate Widget Programmatically
-    if (typeof window !== 'undefined') {
-      const triggerTranslate = () => {
-        const googleCombo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
-        if (googleCombo) {
-          googleCombo.value = lang.code;
-          googleCombo.dispatchEvent(new Event('change', { bubbles: true }));
-          return true;
-        }
-        return false;
-      };
-
-      if (!triggerTranslate()) {
-        // Fallback for when the widget isn't ready in the DOM yet
-        let attempts = 0;
-        const interval = setInterval(() => {
-          attempts++;
-          if (triggerTranslate() || attempts > 10) {
-            clearInterval(interval);
-          }
-        }, 500);
-      }
+    // Target the hidden Google dropdown select box directly
+    const googleSelect = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+    
+    if (googleSelect) {
+      googleSelect.value = lang.code;
+      // Dispatch change event to trigger the translation engine
+      googleSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      console.warn("Gupta Engine translation widget has not loaded in the DOM yet.");
+      toast({
+        title: "Initializing Translator",
+        description: "Setting up regional language support. Please try again in a moment.",
+      });
     }
   };
 
@@ -296,6 +301,9 @@ export default function Home() {
       </header>
 
       <main className="flex-1 overflow-hidden container mx-auto px-4 md:px-6">
+        {/* Hidden container required by Google Translate */}
+        <div id="google_translate_element" style={{ display: 'none' }} />
+        
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 h-full py-2 lg:py-4">
           <aside className="hidden lg:block lg:col-span-4 space-y-4 lg:space-y-6 overflow-y-auto pr-0 lg:pr-2 custom-scrollbar animate-in fade-in slide-in-from-left-10 duration-1000 pb-24 lg:pb-0">
             <GitaWisdom />

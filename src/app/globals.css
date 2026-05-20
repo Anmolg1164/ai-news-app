@@ -37,7 +37,7 @@
       radial-gradient(at 0% 0%, hsla(262, 83%, 58%, 0.08) 0, transparent 50%),
       radial-gradient(at 100% 100%, hsla(191, 91%, 47%, 0.08) 0, transparent 50%),
       radial-gradient(at 50% 50%, hsla(346, 100%, 62%, 0.03) 0, transparent 50%);
-    top: 0 !important;
+    top: 0px !important;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
@@ -50,10 +50,18 @@ html {
 }
 
 body {
-  top: 0 !important;
+  top: 0px !important;
 }
 
 /* Hide Google Translate UI Elements */
+.skiptranslate {
+  display: none !important;
+}
+
+#goog-gt-tt {
+  display: none !important;
+}
+
 .goog-te-banner-frame.skiptranslate,
 .goog-te-gadget-icon,
 .goog-te-gadget-simple span,
