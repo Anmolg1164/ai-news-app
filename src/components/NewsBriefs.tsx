@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
@@ -7,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Newspaper, ExternalLink, ShieldCheck, Loader2, Globe, Volume2, Bookmark, BookmarkCheck, Square, Play, Pause, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { verifyNews, type VerifyNewsOutput } from "@/ai/flows/verify-news";
-import { translateNews, type TranslateNewsOutput } from "@/ai/flows/translate-news";
 import { fetchNews } from "@/ai/flows/get-journey-intelligence";
 import { summarizeNewsBatch } from "@/ai/flows/summarize-news-batch";
 import { speakText, stopBrowserSpeech } from "@/lib/browser-speech";
@@ -26,13 +24,11 @@ interface NewsBrief {
 
 function NewsBriefCard({ 
   brief, 
-  language, 
   onSave, 
   isSaved,
   isDisabled
 }: { 
   brief: NewsBrief, 
-  language: string, 
   onSave: (brief: NewsBrief) => void,
   isSaved: boolean,
   isDisabled: boolean
@@ -40,68 +36,11 @@ function NewsBriefCard({
   const [showVerify, setShowVerify] = useState(false);
   const [verifyData, setVerifyData] = useState<VerifyNewsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   
-  const [translatedData, setTranslatedData] = useState<TranslateNewsOutput | null>(null);
-  const [isTranslating, setIsTranslating] = useState(false);
-  
   const cardRef = useRef<HTMLDivElement>(null);
-  const translationCache = useRef<Record<string, TranslateNewsOutput>>({});
   const { toast } = useToast();
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setIsVisible(true);
-      },
-      { threshold: 0.1 }
-    );
-    if (cardRef.current) observer.observe(cardRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const handleTranslation = useCallback(async (targetLang: string) => {
-    if (targetLang === "English") {
-      setTranslatedData(null);
-      return;
-    }
-    const cacheKey = `${brief.id}-${targetLang}`;
-    if (translationCache.current[cacheKey]) {
-      setTranslatedData(translationCache.current[cacheKey]);
-      return;
-    }
-    setIsTranslating(true);
-    window.dispatchEvent(new CustomEvent('ai-call'));
-    try {
-      const result = await translateNews({
-        title: brief.title,
-        content: brief.content,
-        targetLanguage: targetLang
-      });
-      translationCache.current[cacheKey] = result;
-      setTranslatedData(result);
-    } catch (error: any) {
-      console.warn("Translation skipped due to quota");
-    } finally {
-      setIsTranslating(false);
-    }
-  }, [brief.id, brief.title, brief.content]);
-
-  // Handle reactive language switching
-  useEffect(() => {
-    if (language === "English") {
-      setTranslatedData(null);
-    } else if (isVisible && !isTranslating) {
-      // Check if we already have the correct translation showing
-      const cacheKey = `${brief.id}-${language}`;
-      if (!translatedData || translationCache.current[cacheKey] !== translatedData) {
-        const timer = setTimeout(() => handleTranslation(language), 800);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [isVisible, language, handleTranslation, brief.id, isTranslating, translatedData]);
 
   useEffect(() => {
     const handleGlobalStop = () => setIsPlaying(false);
@@ -123,7 +62,8 @@ function NewsBriefCard({
     setIsResetting(true);
     setTimeout(() => {
       setIsResetting(false);
-      const textToRead = translatedData?.translatedContent || brief.content;
+      // Read current text content from the DOM to capture Google Translate updates
+      const textToRead = cardRef.current?.querySelector('.news-content')?.textContent || brief.content;
       setIsPlaying(true);
       speakText(textToRead, () => setIsPlaying(false));
     }, 300);
@@ -151,9 +91,6 @@ function NewsBriefCard({
     }
   };
 
-  const currentTitle = translatedData?.translatedTitle || brief.title;
-  const currentContent = translatedData?.translatedContent || brief.content;
-
   return (
     <div ref={cardRef} className="h-full relative">
       <Card className={cn("border-none glass h-full flex flex-col overflow-hidden transition-all duration-500 hover:shadow-xl hover:-translate-y-1 rounded-[2rem] group/card", isDisabled && "opacity-60 grayscale-[0.2]")}>
@@ -163,12 +100,6 @@ function NewsBriefCard({
               <span className="text-[8px] font-bold text-white bg-primary px-2 py-1 rounded-full uppercase tracking-widest">
                 {brief.category}
               </span>
-              {isTranslating && (
-                <div className="flex items-center gap-1.5">
-                  <Loader2 size={10} className="animate-spin text-accent" />
-                  <span className="text-[7px] font-bold text-accent uppercase tracking-tighter">to {language}...</span>
-                </div>
-              )}
             </div>
             <div className="flex items-center gap-2">
                <button 
@@ -180,7 +111,7 @@ function NewsBriefCard({
             </div>
           </div>
           <CardTitle className="text-base font-headline text-primary font-bold tracking-tight leading-tight line-clamp-2">
-            {currentTitle}
+            {brief.title}
           </CardTitle>
           <div className="flex items-center gap-1.5 mt-1">
             <Calendar size={10} className="text-muted-foreground/60" />
@@ -190,8 +121,8 @@ function NewsBriefCard({
         
         <CardContent className="p-4 pt-1 flex-1 relative">
           <div className={cn("transition-all duration-700", showVerify ? "opacity-20 blur-md scale-95" : "opacity-100")}>
-            <p className="text-primary/70 leading-snug text-[13px] font-medium line-clamp-3">
-              {currentContent}
+            <p className="news-content text-primary/70 leading-snug text-[13px] font-medium line-clamp-3">
+              {brief.content}
             </p>
           </div>
 
@@ -442,7 +373,6 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
               <NewsBriefCard 
                 key={brief.id} 
                 brief={brief} 
-                language={language} 
                 onSave={handleSave} 
                 isSaved={savedBriefs.some(b => b.id === brief.id)}
                 isDisabled={isPlaying}

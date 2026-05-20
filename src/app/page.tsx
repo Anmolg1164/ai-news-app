@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -40,7 +39,7 @@ const LANGUAGES = [
   { code: "en", name: "English" },
   { code: "hi", name: "Hindi" },
   { code: "or", name: "Odia" },
-  { code: "bho", name: "Bhojpuri" },
+  { code: "bh", name: "Bhojpuri" },
   { code: "pa", name: "Punjabi" },
   { code: "bn", name: "Bengali" },
   { code: "gu", name: "Gujarati" },
@@ -98,6 +97,28 @@ export default function Home() {
     setSearchInput("");
     setShowSavedOnly(false);
     if (newsScrollRef.current) newsScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleLanguageChange = (lang: typeof LANGUAGES[0]) => {
+    setActiveLanguage(lang);
+    
+    // Trigger Google Translate Widget
+    if (typeof window !== 'undefined') {
+      const googleCombo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+      if (googleCombo) {
+        googleCombo.value = lang.code;
+        googleCombo.dispatchEvent(new Event('change'));
+      } else {
+        // Fallback for when the widget isn't ready
+        setTimeout(() => {
+           const retryCombo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+           if (retryCombo) {
+             retryCombo.value = lang.code;
+             retryCombo.dispatchEvent(new Event('change'));
+           }
+        }, 500);
+      }
+    }
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -208,7 +229,7 @@ export default function Home() {
                   {LANGUAGES.map((l) => (
                     <DropdownMenuItem 
                       key={l.code} 
-                      onClick={() => setActiveLanguage(l)}
+                      onClick={() => handleLanguageChange(l)}
                       className="cursor-pointer font-bold py-2 px-3 rounded-lg m-0.5 hover:bg-accent/5 text-accent text-xs"
                     >
                       {l.name}
@@ -241,7 +262,7 @@ export default function Home() {
                     </div>
                     <Progress value={aiUsage} className="h-1" />
                     <p className="text-[9px] text-muted-foreground/60 italic leading-relaxed">
-                      Gemini's free tier resets every <span className="text-primary font-bold">60 seconds</span>. Background translations consume this while you scroll.
+                      Gemini's free tier resets every <span className="text-primary font-bold">60 seconds</span>. Intelligence calls consume this while you explore.
                     </p>
                   </div>
                   <div className="pt-2 border-t border-primary/5 flex items-center justify-between">
