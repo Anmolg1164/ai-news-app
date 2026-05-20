@@ -13,18 +13,25 @@ import {
   Square
 } from "lucide-react";
 import { interpretGitaVerse, type InterpretGitaVerseOutput } from "@/ai/flows/interpret-gita-verse";
+import { translateVerse } from "@/ai/flows/translate-verse";
 import { speakText, stopBrowserSpeech } from "@/lib/browser-speech";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import gitaData from "@/app/lib/gita-verses.json";
 import { useToast } from "@/hooks/use-toast";
 
-export function GitaWisdom() {
+interface GitaWisdomProps {
+  language?: string;
+}
+
+export function GitaWisdom({ language = "English" }: GitaWisdomProps) {
   const [verseIndex, setVerseIndex] = useState(0);
   const [interpretation, setInterpretation] = useState<InterpretGitaVerseOutput | null>(null);
+  const [translatedVerse, setTranslatedVerse] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
   
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -37,6 +44,31 @@ export function GitaWisdom() {
     const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
     setVerseIndex(dayOfYear % verses.length);
   }, [verses.length]);
+
+  useEffect(() => {
+    if (language !== "English") {
+      handleTranslate();
+    } else {
+      setTranslatedVerse(null);
+    }
+  }, [language, currentVerse]);
+
+  const handleTranslate = async () => {
+    setIsTranslating(true);
+    window.dispatchEvent(new CustomEvent('ai-call'));
+    try {
+      const result = await translateVerse({
+        verse: currentVerse.sanskrit,
+        english: currentVerse.english,
+        targetLanguage: language
+      });
+      setTranslatedVerse(result.translatedVerse);
+    } catch (e) {
+      console.error("Verse translation error:", e);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
 
   const forceCleanup = () => {
     stopBrowserSpeech();
@@ -79,8 +111,7 @@ export function GitaWisdom() {
     setIsResetting(true);
     setTimeout(() => {
       setIsResetting(false);
-      // Read text from the DOM to capture any Google Translate updates
-      const textToRead = cardRef.current?.querySelector('.verse-english')?.textContent || currentVerse.english;
+      const textToRead = translatedVerse || currentVerse.english;
       setIsPlaying(true);
       speakText(textToRead, () => setIsPlaying(false));
     }, 300);
@@ -92,7 +123,10 @@ export function GitaWisdom() {
     }
     setVerseIndex((prev) => (prev + 1) % verses.length);
     setInterpretation(null);
+    setTranslatedVerse(null);
   };
+
+  const displayEnglish = translatedVerse || currentVerse.english;
 
   return (
     <Card ref={cardRef} className={cn(
@@ -115,7 +149,7 @@ export function GitaWisdom() {
               onClick={nextVerse} 
               className="h-8 w-8 text-[#5c4b37] hover:bg-[#eee1c5]/50 rounded-full"
             >
-              <RefreshCw size={14} className={cn(loading ? "animate-spin" : "")} />
+              <RefreshCw size={14} className={cn(loading || isTranslating ? "animate-spin" : "")} />
             </Button>
           </div>
         </div>
@@ -133,7 +167,7 @@ export function GitaWisdom() {
           <div className="pt-2">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] font-bold text-[#b4945e] uppercase tracking-widest flex items-center gap-1">
-                Divine Insight
+                Divine Insight {isTranslating && <Loader2 size={8} className="animate-spin" />}
               </span>
               <Button 
                 variant="ghost" 
@@ -149,7 +183,7 @@ export function GitaWisdom() {
               </Button>
             </div>
             <p className="verse-english text-sm text-[#5c4b37]/90 leading-relaxed font-serif">
-              {currentVerse.english}
+              {displayEnglish}
             </p>
           </div>
         </div>

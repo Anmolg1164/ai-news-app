@@ -65,20 +65,6 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
-    
-    // Define the global init function Google looks for
-    (window as any).googleTranslateElementInit = () => {
-      new (window as any).google.translate.TranslateElement(
-        {
-          pageLanguage: 'en',
-          includedLanguages: 'en,hi,or,bho,pa,bn,gu,es,fr',
-          layout: (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE,
-          autoDisplay: false,
-        },
-        'google_translate_element'
-      );
-    };
-
     if (typeof window !== 'undefined') {
       (window as any).stopAllAudio = () => {
         const audios = document.querySelectorAll('audio');
@@ -113,25 +99,6 @@ export default function Home() {
     setSearchInput("");
     setShowSavedOnly(false);
     if (newsScrollRef.current) newsScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleLanguageChange = (lang: typeof LANGUAGES[0]) => {
-    setActiveLanguage(lang);
-    
-    // Target the hidden Google dropdown select box directly
-    const googleSelect = document.querySelector('.goog-te-combo') as HTMLSelectElement;
-    
-    if (googleSelect) {
-      googleSelect.value = lang.code;
-      // Dispatch change event to trigger the translation engine
-      googleSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    } else {
-      console.warn("Gupta Engine translation widget has not loaded in the DOM yet.");
-      toast({
-        title: "Initializing Translator",
-        description: "Setting up regional language support. Please try again in a moment.",
-      });
-    }
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -172,8 +139,8 @@ export default function Home() {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden relative" suppressHydrationWarning>
-      <header className="z-40 glass border-b border-white/40 flex-shrink-0" suppressHydrationWarning>
+    <div className="h-screen flex flex-col bg-background overflow-hidden relative">
+      <header className="z-40 glass border-b border-white/40 flex-shrink-0">
         <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 md:gap-3 group">
             <div className="w-9 h-9 md:w-10 md:h-10 bg-gradient-to-tr from-primary to-secondary rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-xl shadow-primary/30 group-hover:rotate-6 transition-all duration-500 cursor-pointer relative overflow-hidden">
@@ -242,7 +209,7 @@ export default function Home() {
                   {LANGUAGES.map((l) => (
                     <DropdownMenuItem 
                       key={l.code} 
-                      onClick={() => handleLanguageChange(l)}
+                      onClick={() => setActiveLanguage(l)}
                       className="cursor-pointer font-bold py-2 px-3 rounded-lg m-0.5 hover:bg-accent/5 text-accent text-xs"
                     >
                       {l.name}
@@ -301,12 +268,9 @@ export default function Home() {
       </header>
 
       <main className="flex-1 overflow-hidden container mx-auto px-4 md:px-6">
-        {/* Hidden container required by Google Translate */}
-        <div id="google_translate_element" style={{ display: 'none' }} />
-        
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 h-full py-2 lg:py-4">
           <aside className="hidden lg:block lg:col-span-4 space-y-4 lg:space-y-6 overflow-y-auto pr-0 lg:pr-2 custom-scrollbar animate-in fade-in slide-in-from-left-10 duration-1000 pb-24 lg:pb-0">
-            <GitaWisdom />
+            <GitaWisdom language={activeLanguage.name} />
             <GuptaEngineStatus />
           </aside>
 
@@ -348,7 +312,7 @@ export default function Home() {
               </button>
             </SheetHeader>
             <div className="space-y-6">
-              <GitaWisdom />
+              <GitaWisdom language={activeLanguage.name} />
               <GuptaEngineStatus isMobile />
             </div>
           </SheetContent>

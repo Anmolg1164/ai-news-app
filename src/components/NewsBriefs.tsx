@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { verifyNews, type VerifyNewsOutput } from "@/ai/flows/verify-news";
 import { fetchNews } from "@/ai/flows/get-journey-intelligence";
 import { summarizeNewsBatch } from "@/ai/flows/summarize-news-batch";
+import { translateNews } from "@/ai/flows/translate-news";
 import { speakText, stopBrowserSpeech } from "@/lib/browser-speech";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -26,18 +27,23 @@ function NewsBriefCard({
   brief, 
   onSave, 
   isSaved,
-  isDisabled
+  isDisabled,
+  language
 }: { 
   brief: NewsBrief, 
   onSave: (brief: NewsBrief) => void,
   isSaved: boolean,
-  isDisabled: boolean
+  isDisabled: boolean,
+  language: string
 }) {
   const [showVerify, setShowVerify] = useState(false);
   const [verifyData, setVerifyData] = useState<VerifyNewsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  
+  const [translatedContent, setTranslatedContent] = useState<{ title: string; content: string } | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
   
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -47,6 +53,34 @@ function NewsBriefCard({
     window.addEventListener('stop-all-audio', handleGlobalStop);
     return () => window.removeEventListener('stop-all-audio', handleGlobalStop);
   }, []);
+
+  useEffect(() => {
+    if (language !== "English") {
+      handleTranslate();
+    } else {
+      setTranslatedContent(null);
+    }
+  }, [language, brief.id]);
+
+  const handleTranslate = async () => {
+    setIsTranslating(true);
+    window.dispatchEvent(new CustomEvent('ai-call'));
+    try {
+      const result = await translateNews({
+        title: brief.title,
+        content: brief.content,
+        targetLanguage: language
+      });
+      setTranslatedContent({
+        title: result.translatedTitle,
+        content: result.translatedContent
+      });
+    } catch (e) {
+      console.error("Translation error:", e);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
 
   const handlePlayAudio = () => {
     if (isPlaying) {
@@ -62,8 +96,7 @@ function NewsBriefCard({
     setIsResetting(true);
     setTimeout(() => {
       setIsResetting(false);
-      // Read current text content from the DOM to capture Google Translate updates
-      const textToRead = cardRef.current?.querySelector('.news-content')?.textContent || brief.content;
+      const textToRead = translatedContent?.content || brief.content;
       setIsPlaying(true);
       speakText(textToRead, () => setIsPlaying(false));
     }, 300);
@@ -91,6 +124,9 @@ function NewsBriefCard({
     }
   };
 
+  const displayTitle = translatedContent?.title || brief.title;
+  const displayContent = translatedContent?.content || brief.content;
+
   return (
     <div ref={cardRef} className="h-full relative">
       <Card className={cn("border-none glass h-full flex flex-col overflow-hidden transition-all duration-500 hover:shadow-xl hover:-translate-y-1 rounded-[2rem] group/card", isDisabled && "opacity-60 grayscale-[0.2]")}>
@@ -100,6 +136,12 @@ function NewsBriefCard({
               <span className="text-[8px] font-bold text-white bg-primary px-2 py-1 rounded-full uppercase tracking-widest">
                 {brief.category}
               </span>
+              {isTranslating && (
+                <div className="flex items-center gap-1">
+                  <Loader2 size={8} className="animate-spin text-primary" />
+                  <span className="text-[6px] font-bold text-primary uppercase">Translating...</span>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
                <button 
@@ -111,7 +153,7 @@ function NewsBriefCard({
             </div>
           </div>
           <CardTitle className="text-base font-headline text-primary font-bold tracking-tight leading-tight line-clamp-2">
-            {brief.title}
+            {displayTitle}
           </CardTitle>
           <div className="flex items-center gap-1.5 mt-1">
             <Calendar size={10} className="text-muted-foreground/60" />
@@ -122,7 +164,7 @@ function NewsBriefCard({
         <CardContent className="p-4 pt-1 flex-1 relative">
           <div className={cn("transition-all duration-700", showVerify ? "opacity-20 blur-md scale-95" : "opacity-100")}>
             <p className="news-content text-primary/70 leading-snug text-[13px] font-medium line-clamp-3">
-              {brief.content}
+              {displayContent}
             </p>
           </div>
 
@@ -376,6 +418,7 @@ export const NewsBriefs = forwardRef<HTMLDivElement, NewsBriefsProps>(({
                 onSave={handleSave} 
                 isSaved={savedBriefs.some(b => b.id === brief.id)}
                 isDisabled={isPlaying}
+                language={language}
               />
             ))}
             {isLoadingMore && (
