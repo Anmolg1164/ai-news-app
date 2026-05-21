@@ -43,7 +43,7 @@ const interpretGitaVerseFlow = ai.defineFlow(
   },
   async (input) => {
     let retries = 0;
-    const maxRetries = 5;
+    const maxRetries = 6;
     
     while (retries < maxRetries) {
       try {
@@ -51,17 +51,26 @@ const interpretGitaVerseFlow = ai.defineFlow(
         if (!output) throw new Error('Empty response from AI');
         return output;
       } catch (error: any) {
-        const isRateLimit = error.message?.includes('429') || error.status === 429 || error.message?.includes('RESOURCE_EXHAUSTED');
-        if (isRateLimit && retries < maxRetries - 1) {
+        const msg = error.message?.toLowerCase() || "";
+        const isRetryable = 
+          msg.includes('429') || 
+          msg.includes('503') ||
+          msg.includes('service unavailable') ||
+          msg.includes('high demand') ||
+          msg.includes('resource_exhausted') ||
+          error.status === 429 || 
+          error.status === 503;
+
+        if (isRetryable && retries < maxRetries - 1) {
           retries++;
           // Exponential backoff
-          const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+          const delay = Math.pow(2, retries) * 1200 + Math.random() * 1000;
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
         throw error;
       }
     }
-    throw new Error('Maximum retries exceeded for interpretation.');
+    throw new Error('Wisdom interpretation service is currently busy. Please try again shortly.');
   }
 );

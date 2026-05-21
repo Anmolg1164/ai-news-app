@@ -44,7 +44,7 @@ const translateVerseFlow = ai.defineFlow(
   },
   async (input) => {
     let retries = 0;
-    const maxRetries = 5;
+    const maxRetries = 6;
     
     while (retries < maxRetries) {
       try {
@@ -52,10 +52,19 @@ const translateVerseFlow = ai.defineFlow(
         if (!output) throw new Error('Empty response from AI');
         return output;
       } catch (error: any) {
-        const isRateLimit = error.message?.includes('429') || error.status === 429 || error.message?.includes('RESOURCE_EXHAUSTED');
-        if (isRateLimit && retries < maxRetries - 1) {
+        const msg = error.message?.toLowerCase() || "";
+        const isRetryable = 
+          msg.includes('429') || 
+          msg.includes('503') ||
+          msg.includes('service unavailable') ||
+          msg.includes('high demand') ||
+          msg.includes('resource_exhausted') ||
+          error.status === 429 || 
+          error.status === 503;
+
+        if (isRetryable && retries < maxRetries - 1) {
           retries++;
-          // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+          // Exponential backoff: 2s, 4s, 8s, 16s...
           const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
@@ -63,6 +72,6 @@ const translateVerseFlow = ai.defineFlow(
         throw error;
       }
     }
-    throw new Error('Gita verse translation failed after multiple retries due to rate limits.');
+    throw new Error('Gita verse translation failed due to high service demand.');
   }
 );
