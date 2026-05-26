@@ -10,7 +10,8 @@ import {
   ScrollText, 
   Volume2, 
   Loader2,
-  Square
+  Square,
+  X
 } from "lucide-react";
 import { interpretGitaVerse, type InterpretGitaVerseOutput } from "@/ai/flows/interpret-gita-verse";
 import { translateVerse } from "@/ai/flows/translate-verse";
@@ -111,7 +112,13 @@ export function GitaWisdom({ language = "English" }: GitaWisdomProps) {
     setIsResetting(true);
     setTimeout(() => {
       setIsResetting(false);
-      const textToRead = translatedVerse || currentVerse.english;
+      const baseText = translatedVerse || currentVerse.english;
+      let textToRead = baseText;
+      
+      if (interpretation) {
+        textToRead = `Verse meaning: ${baseText}.And here is the briefing of quote frojm Anmol that Interpretation: ${interpretation.interpretation}. Modern relevance: ${interpretation.modernRelevance}`;
+      }
+      
       setIsPlaying(true);
       speakText(textToRead, () => setIsPlaying(false));
     }, 300);
@@ -195,7 +202,16 @@ export function GitaWisdom({ language = "English" }: GitaWisdomProps) {
         )}
 
         {interpretation && (
-          <div className="pt-4 space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="pt-4 space-y-4 animate-in fade-in slide-in-from-top-4 duration-500 relative">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setInterpretation(null)}
+              className="absolute -top-2 -right-2 h-7 w-7 text-[#b4945e] hover:bg-[#eee1c5] hover:text-[#5c4b37] rounded-full z-20"
+            >
+              <X size={14} />
+            </Button>
+            
             <div className="space-y-1">
               <h4 className="text-[10px] font-bold text-[#b4945e] uppercase tracking-widest">Interpretation</h4>
               <p className="text-sm text-[#5c4b37]/90 leading-relaxed font-serif">
